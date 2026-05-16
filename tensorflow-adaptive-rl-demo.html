@@ -1,130 +1,81 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TensorFlow.js Adaptive RL - King of the Hill DQN Demo</title>
+    <title>TensorFlow.js DQN - King of the Hill (3D Visualization)</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: 'Segoe UI', 'Monaco', 'Courier New', monospace;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
-            color: #0f0;
-            min-height: 100vh;
-            padding: 20px;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Monaco', 'Courier New', monospace;
         }
         
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            color: #ffaa44;
-            margin-bottom: 10px;
-            font-size: 1.8rem;
-        }
-        
-        h2 {
-            color: #88aaff;
-            margin: 20px 0 10px 0;
-            font-size: 1.2rem;
-            border-bottom: 1px solid #ffaa44;
-            padding-bottom: 5px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header p {
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-        
-        .card {
-            background: rgba(10, 10, 26, 0.9);
-            border: 1px solid #ffaa44;
+        /* UI Overlay */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 15px;
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(5px);
-        }
-        
-        .card-title {
-            color: #ffaa44;
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .card-title .badge {
-            background: #ffaa44;
-            color: #0a0a1a;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-        }
-        
-        .metric-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .metric {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 5px;
+            color: #0f0;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
             font-family: monospace;
+            min-width: 250px;
+            border: 1px solid #ffaa44;
         }
         
-        .metric-label {
-            color: #aaa;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .metric-value {
+        #metrics {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 8px;
             color: #ffaa44;
-            font-size: 1.4rem;
-            font-weight: bold;
-            word-break: break-all;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            text-align: right;
+            font-family: monospace;
+            min-width: 220px;
+            border: 1px solid #ffaa44;
         }
         
-        .button-group {
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 100;
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 15px;
+            pointer-events: auto;
         }
         
         button {
             background: linear-gradient(135deg, #ffaa44, #ff6600);
             color: #0a0a1a;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
             font-family: monospace;
             transition: transform 0.2s;
+            pointer-events: auto;
         }
         
         button:hover {
             transform: scale(1.02);
-            background: linear-gradient(135deg, #ffcc66, #ff8844);
         }
         
         button:active {
@@ -133,11 +84,6 @@
         
         .btn-stop {
             background: linear-gradient(135deg, #ff4444, #cc0000);
-            color: white;
-        }
-        
-        .btn-reset {
-            background: linear-gradient(135deg, #444, #222);
             color: white;
         }
         
@@ -155,423 +101,433 @@
             50% { opacity: 0.5; }
         }
         
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: #333;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ffaa44, #ff6600);
-            width: 0%;
-            transition: width 0.3s;
-            border-radius: 10px;
-        }
-        
-        .console {
-            background: #000;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            height: 200px;
-            overflow-y: scroll;
-            border: 1px solid #ffaa44;
-        }
-        
-        .console-line {
-            color: #0f0;
-            margin: 2px 0;
-            border-left: 2px solid #ffaa44;
-            padding-left: 10px;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #333;
-            font-size: 0.7rem;
-            color: #666;
-        }
-        
-        .inline-code {
-            background: #1a1a2e;
-            padding: 2px 5px;
-            border-radius: 3px;
+        .metric-value {
             color: #ffaa44;
-            font-family: monospace;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .metric-label {
+            color: #aaa;
+            font-size: 10px;
+            text-transform: uppercase;
         }
         
         hr {
             border-color: #333;
-            margin: 20px 0;
+            margin: 8px 0;
+        }
+        
+        .in-zone {
+            color: #44ff44;
+            animation: pulse 0.5s infinite;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1> TensorFlow.js Adaptive Reinforcement Learning</h1>
-            <p>Deep Q-Network (DQN) | King of the Hill | Dynamic Goal Repositioning</p>
-            <p style="font-size: 0.8rem; margin-top: 5px;">Pure browser - no Node.js, no servers, no installation</p>
-        </div>
-        
-        <!-- Control Card -->
-        <div class="card">
-            <div class="card-title">
-                 Control Panel
-                <span class="badge">Active</span>
-            </div>
-            <div class="button-group">
-                <button id="btn-train"> Start Training</button>
-                <button id="btn-stop" class="btn-stop"> Stop Training</button>
-                <button id="btn-reset" class="btn-reset"> Reset Session</button>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div style="margin-top: 10px;">
-                Status: <span id="status" class="status-idle">IDLE</span>
-            </div>
-        </div>
-        
-        <!-- Performance Metrics Card -->
-        <div class="card">
-            <div class="card-title">
-                 Performance Metrics
-                <span class="badge">Real-time</span>
-            </div>
-            <div class="metric-grid">
-                <div class="metric">
-                    <div class="metric-label">Episode</div>
-                    <div class="metric-value" id="episode">0</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Episode Reward</div>
-                    <div class="metric-value" id="reward">0</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Exploration (Epsilon)</div>
-                    <div class="metric-value" id="epsilon">0.300</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Network Loss</div>
-                    <div class="metric-value" id="loss">0.0000</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Memory Size</div>
-                    <div class="metric-value" id="memory">0</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Total Training Steps</div>
-                    <div class="metric-value" id="steps">0</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Environment Adaptation Card -->
-        <div class="card">
-            <div class="card-title">
-                 Environment Adaptation
-                <span class="badge">Dynamic</span>
-            </div>
-            <div class="metric-grid">
-                <div class="metric">
-                    <div class="metric-label">Current Move Interval</div>
-                    <div class="metric-value" id="interval">80</div>
-                    <div style="font-size: 0.7rem; color: #aaa;">steps between hill moves</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Total Goal Changes</div>
-                    <div class="metric-value" id="goal-changes">0</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Avg Adaptation Time</div>
-                    <div class="metric-value" id="adapt-time">--</div>
-                    <div style="font-size: 0.7rem; color: #aaa;">steps to find new hill</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Neural Network Architecture Card -->
-        <div class="card">
-            <div class="card-title">
-                 Neural Network Architecture
-                <span class="badge">Deep Q-Network</span>
-            </div>
-            <div class="metric-grid">
-                <div class="metric">
-                    <div class="metric-label">Input Layer</div>
-                    <div class="metric-value">6 neurons</div>
-                    <div style="font-size: 0.7rem;">agent x,z | goal x,z | time | inZone</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Hidden Layer 1</div>
-                    <div class="metric-value">64 neurons</div>
-                    <div style="font-size: 0.7rem;">ReLU activation</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Hidden Layer 2</div>
-                    <div class="metric-value">64 neurons</div>
-                    <div style="font-size: 0.7rem;">ReLU activation</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-label">Output Layer</div>
-                    <div class="metric-value">5 neurons</div>
-                    <div style="font-size: 0.7rem;">Q-values for each action</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Console Output Card -->
-        <div class="card">
-            <div class="card-title">
-                 Training Console
-                <span class="badge">Logs</span>
-            </div>
-            <div class="console" id="console">
-                <div class="console-line">[System] TensorFlow.js Adaptive RL Module loaded</div>
-                <div class="console-line">[System] Click START TRAINING to begin</div>
-                <div class="console-line">[System] The agent will learn to chase the moving hill</div>
-            </div>
-        </div>
-        
-        <!-- Tutorial Card -->
-        <div class="card">
-            <div class="card-title">
-                 Tutorial: How This Works
-                <span class="badge">Learn</span>
-            </div>
-            
-            <h2>What is Adaptive Reinforcement Learning?</h2>
-            <p>Normal RL: The rules never change. The agent learns ONE strategy.</p>
-            <p>Adaptive RL: The rules CHANGE over time. The agent must KEEP LEARNING.</p>
-            <p>In this game, the hill moves every N steps, and N changes randomly between episodes!</p>
-            
-            <h2>What is a Deep Q-Network (DQN)?</h2>
-            <p>Instead of a big lookup table (Q-table), DQN uses a NEURAL NETWORK to predict Q-values.</p>
-            <p>Benefits: Handles continuous states, generalizes to new situations, scales to complex problems.</p>
-            
-            <h2>The Bellman Equation</h2>
-            <p><code class="inline-code">Q(s,a) = Q(s,a) + α * [ R + γ * max(Q(s',a')) - Q(s,a) ]</code></p>
-            <p>This is how the agent learns from rewards and updates its neural network.</p>
-            
-            <h2>Key DQN Features in This Code</h2>
-            <ul style="margin-left: 20px; line-height: 1.8;">
-                <li><strong>Experience Replay:</strong> Stores past experiences, learns from random batches</li>
-                <li><strong>Target Network:</strong> Separate network for stable training targets</li>
-                <li><strong>Epsilon-Greedy:</strong> Balances exploration vs exploitation</li>
-                <li><strong>Adaptive Epsilon:</strong> Explores more when performing poorly</li>
-                <li><strong>Adaptive Environment:</strong> Hill move speed changes over time</li>
-            </ul>
-            
-            <h2>Reading the Metrics</h2>
-            <ul style="margin-left: 20px; line-height: 1.8;">
-                <li><strong>Episode Reward:</strong> Total points in current game (higher = better)</li>
-                <li><strong>Epsilon:</strong> 0.3 = 30% random actions, 70% learned actions (decreases over time)</li>
-                <li><strong>Network Loss:</strong> How wrong the network is (lower = better)</li>
-                <li><strong>Avg Adaptation Time:</strong> How many steps to find hill after it moves (lower = better)</li>
-                <li><strong>Move Interval:</strong> How many steps until hill moves again (changes adaptively!)</li>
-            </ul>
-            
-            <h2>What to Watch For</h2>
-            <ul style="margin-left: 20px; line-height: 1.8;">
-                <li>Episode Reward should INCREASE over time (agent is learning)</li>
-                <li>Epsilon should DECREASE over time (agent explores less, exploits more)</li>
-                <li>Network Loss should DECREASE over time (predictions get better)</li>
-                <li>Adaptation Time should DECREASE (faster reaction to hill moves)</li>
-                <li>Move Interval changes randomly - watch the agent adapt!</li>
-            </ul>
-        </div>
-        
-        <div class="footer">
-            TensorFlow.js Adaptive Reinforcement Learning Demo | Deep Q-Network | King of the Hill
-            <br>Pure browser JavaScript - No Node.js required
-        </div>
+    <div id="ui">
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">🧠 TensorFlow.js DQN</div>
+        <div>Status: <span id="status" class="status-idle">IDLE</span></div>
+        <div>Episode: <span id="episode">0</span></div>
+        <div>Step: <span id="step">0</span></div>
+        <div>Distance to Hill: <span id="distance">0.00</span></div>
+        <div>In Hill Zone: <span id="inzone">❌ NO</span></div>
+        <hr>
+        <div>🏆 Episode Reward: <span id="episode-reward">0</span></div>
+    </div>
+    
+    <div id="metrics">
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">📊 Agent Metrics</div>
+        <div>Exploration (ε): <span id="epsilon" class="metric-value">0.300</span></div>
+        <div>Network Loss: <span id="loss" class="metric-value">0.0000</span></div>
+        <div>Memory Size: <span id="memory" class="metric-value">0</span></div>
+        <div>Total Steps: <span id="steps" class="metric-value">0</span></div>
+        <hr>
+        <div>🌍 Environment</div>
+        <div>Move Interval: <span id="interval" class="metric-value">80</span> steps</div>
+        <div>Goal Changes: <span id="goal-changes" class="metric-value">0</span></div>
+        <div>Adaptation Time: <span id="adapt-time" class="metric-value">--</span> steps</div>
+    </div>
+    
+    <div id="controls">
+        <button id="btn-train">▶ START TRAINING</button>
+        <button id="btn-stop" class="btn-stop">⏹ STOP</button>
     </div>
 
-    <!-- TensorFlow.js from CDN - PURE BROWSER, NO NODE.JS -->
+    <!-- Three.js for 3D visualization -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+    
+    <!-- TensorFlow.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     
     <!-- Our Adaptive RL Module -->
     <script src="tensorflow-adaptive-rl.js"></script>
     
-    <script>
-        // Wait for everything to load
-        window.onload = async () => {
+    <script type="module">
+        import * as THREE from 'three';
+        
+        // ================================================================
+        // THREE.JS VISUALIZATION SETUP
+        // ================================================================
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1030);
+        scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 22, 22);
+        camera.lookAt(0, 0, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 1);
+        sunLight.position.set(10, 20, 5);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+        
+        const fillLight = new THREE.PointLight(0x4466cc, 0.3);
+        fillLight.position.set(0, 5, 0);
+        scene.add(fillLight);
+        
+        // Ground
+        const gridHelper = new THREE.GridHelper(45, 20, 0x88aaff, 0x335588);
+        gridHelper.position.y = -0.5;
+        scene.add(gridHelper);
+        
+        // Arena bounds
+        const boundsMat = new THREE.LineBasicMaterial({ color: 0x88aaff });
+        const size = 18;
+        const points = [
+            new THREE.Vector3(-size, -0.5, -size), new THREE.Vector3(size, -0.5, -size),
+            new THREE.Vector3(size, -0.5, size), new THREE.Vector3(-size, -0.5, size),
+            new THREE.Vector3(-size, -0.5, -size)
+        ];
+        const boundsGeo = new THREE.BufferGeometry().setFromPoints(points);
+        const boundsLine = new THREE.Line(boundsGeo, boundsMat);
+        scene.add(boundsLine);
+        
+        // The Hill (Goal) - Golden Zone
+        const hillGroup = new THREE.Group();
+        
+        const hillBase = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.5, 2.8, 0.3, 32),
+            new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200, metalness: 0.7 })
+        );
+        hillBase.castShadow = true;
+        hillGroup.add(hillBase);
+        
+        const hillRing = new THREE.Mesh(
+            new THREE.TorusGeometry(2.3, 0.1, 32, 64),
+            new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0xff6600 })
+        );
+        hillRing.rotation.x = Math.PI / 2;
+        hillRing.position.y = 0.2;
+        hillGroup.add(hillRing);
+        
+        const hillBeacon = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8),
+            new THREE.MeshStandardMaterial({ color: 0xff8844, emissive: 0xff4400 })
+        );
+        hillBeacon.position.y = 0.6;
+        hillGroup.add(hillBeacon);
+        
+        scene.add(hillGroup);
+        
+        const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
+        scene.add(hillLight);
+        
+        // Agent (Blue Robot)
+        const agentGroup = new THREE.Group();
+        
+        const agentBody = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 0.8, 0.8),
+            new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.7 })
+        );
+        agentBody.castShadow = true;
+        agentGroup.add(agentBody);
+        
+        const agentHead = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0x88ccff })
+        );
+        agentHead.position.y = 0.7;
+        agentGroup.add(agentHead);
+        
+        const agentEye = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff })
+        );
+        agentEye.position.set(0.25, 0.85, 0.45);
+        agentGroup.add(agentEye);
+        
+        const agentEye2 = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff })
+        );
+        agentEye2.position.set(-0.25, 0.85, 0.45);
+        agentGroup.add(agentEye2);
+        
+        scene.add(agentGroup);
+        
+        // Trail effect
+        let trailPositions = [];
+        const trailMat = new THREE.PointsMaterial({ color: 0x44aaff, size: 0.12 });
+        let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
+        scene.add(trailPoints);
+        
+        // ================================================================
+        // ADAPTIVE RL SETUP
+        // ================================================================
+        
+        // Create environment with adaptive features
+        const env = new TensorFlowRL.Environment({
+            arenaSize: 18,
+            hillRadius: 2.5,
+            hillMoveInterval: 80,
+            adaptiveInterval: true,
+            adaptiveIntervalRange: { min: 40, max: 160 },
+            agentSpeed: 0.45
+        });
+        
+        // Create TensorFlow.js DQN agent
+        const agent = new TensorFlowRL.DQNAgent({
+            learningRate: 0.001,
+            discountFactor: 0.95,
+            epsilon: 0.3,
+            epsilonMin: 0.05,
+            epsilonDecay: 0.995,
+            memorySize: 10000,
+            batchSize: 32,
+            targetUpdateFreq: 100
+        });
+        
+        // Create trainer
+        const trainer = new TensorFlowRL.Trainer(env, agent);
+        
+        // ================================================================
+        // UI ELEMENTS
+        // ================================================================
+        
+        const statusEl = document.getElementById('status');
+        const episodeEl = document.getElementById('episode');
+        const stepEl = document.getElementById('step');
+        const distanceEl = document.getElementById('distance');
+        const inzoneEl = document.getElementById('inzone');
+        const episodeRewardEl = document.getElementById('episode-reward');
+        const epsilonEl = document.getElementById('epsilon');
+        const lossEl = document.getElementById('loss');
+        const memoryEl = document.getElementById('memory');
+        const stepsEl = document.getElementById('steps');
+        const intervalEl = document.getElementById('interval');
+        const goalChangesEl = document.getElementById('goal-changes');
+        const adaptTimeEl = document.getElementById('adapt-time');
+        
+        let currentStep = 0;
+        let currentTotalReward = 0;
+        
+        // ================================================================
+        // TRAINING CALLBACKS - Update 3D Visualization
+        // ================================================================
+        
+        trainer.onUpdate((data) => {
+            if (data.type === 'step') {
+                // Update 3D visualization with current positions
+                const obs = data.observation;
+                
+                // Convert normalized coordinates to world positions
+                // arenaSize is 18, so map from [-1,1] to [-18,18]
+                const agentWorldX = obs[0] * 18;
+                const agentWorldZ = obs[1] * 18;
+                const hillWorldX = obs[2] * 18;
+                const hillWorldZ = obs[3] * 18;
+                
+                // Update positions
+                agentGroup.position.set(agentWorldX, 0, agentWorldZ);
+                hillGroup.position.set(hillWorldX, 0, hillWorldZ);
+                hillLight.position.set(hillWorldX, 1.5, hillWorldZ);
+                
+                // Update trail
+                trailPositions.unshift({ x: agentWorldX, z: agentWorldZ });
+                if (trailPositions.length > 40) trailPositions.pop();
+                
+                const vertices = [];
+                for (const pos of trailPositions) {
+                    vertices.push(pos.x, 0.1, pos.z);
+                }
+                const trailGeo = new THREE.BufferGeometry();
+                trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+                scene.remove(trailPoints);
+                trailPoints = new THREE.Points(trailGeo, trailMat);
+                scene.add(trailPoints);
+                
+                // Update UI
+                currentStep = data.step;
+                currentTotalReward = data.totalReward;
+                
+                episodeEl.textContent = data.episode;
+                stepEl.textContent = data.step;
+                distanceEl.textContent = data.distance.toFixed(2);
+                episodeRewardEl.textContent = Math.floor(data.totalReward);
+                
+                if (data.inZone) {
+                    inzoneEl.innerHTML = '✅ YES';
+                    inzoneEl.className = 'in-zone';
+                    hillLight.intensity = 1.0;
+                    hillBeacon.material.emissiveIntensity = 0.8;
+                } else {
+                    inzoneEl.innerHTML = '❌ NO';
+                    inzoneEl.className = '';
+                    hillLight.intensity = 0.5;
+                    hillBeacon.material.emissiveIntensity = 0.2;
+                }
+                
+                // Update agent metrics
+                if (data.agentMetrics) {
+                    epsilonEl.textContent = data.agentMetrics.epsilon;
+                    lossEl.textContent = data.agentMetrics.lastLoss;
+                    memoryEl.textContent = data.agentMetrics.memorySize;
+                    stepsEl.textContent = data.agentMetrics.totalSteps;
+                }
+                
+                // Update environment metrics
+                if (data.envMetrics) {
+                    intervalEl.textContent = data.envMetrics.currentInterval;
+                    goalChangesEl.textContent = data.envMetrics.totalGoalChanges;
+                    const adaptTime = data.envMetrics.averageAdaptationTime;
+                    adaptTimeEl.textContent = adaptTime ? adaptTime.toFixed(1) : '--';
+                }
+                
+                // Animate the hill ring
+                hillRing.rotation.z += 0.05;
+                
+                // Animate agent (bobbing)
+                agentGroup.position.y = Math.sin(Date.now() * 0.01) * 0.05;
+                
+                // Log goal moves to console
+                if (data.goalMoved) {
+                    console.log(`🏔️ Hill moved! New interval: ${data.envMetrics?.currentInterval} steps`);
+                }
+            }
             
-            // Check if TensorFlow is loaded
-            if (typeof tf === 'undefined') {
-                document.getElementById('console').innerHTML += '<div class="console-line">[ERROR] TensorFlow.js not loaded! Check internet connection.</div>';
+            if (data.type === 'episode_complete') {
+                console.log(`📊 Episode ${data.episode} complete. Reward: ${data.reward.toFixed(1)}. Epsilon: ${data.agentMetrics.epsilon}. Loss: ${data.agentMetrics.lastLoss}`);
+                
+                // Flash effect when episode completes
+                const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true });
+                const flashSphere = new THREE.Mesh(new THREE.SphereGeometry(5, 16, 16), flashMat);
+                flashSphere.position.set(0, 2, 0);
+                scene.add(flashSphere);
+                
+                let opacity = 0.8;
+                const flashInterval = setInterval(() => {
+                    opacity -= 0.1;
+                    flashSphere.material.opacity = opacity;
+                    if (opacity <= 0) {
+                        scene.remove(flashSphere);
+                        clearInterval(flashInterval);
+                    }
+                }, 50);
+            }
+        });
+        
+        // ================================================================
+        // CAMERA FOLLOW
+        // ================================================================
+        
+        function updateCamera() {
+            if (agentGroup.position) {
+                const targetX = agentGroup.position.x;
+                const targetZ = agentGroup.position.z;
+                camera.position.x += (targetX - camera.position.x) * 0.05;
+                camera.position.z += (targetZ + 14 - camera.position.z) * 0.05;
+                camera.lookAt(targetX, 0, targetZ);
+            }
+        }
+        
+        // ================================================================
+        // BUTTON HANDLERS
+        // ================================================================
+        
+        const btnTrain = document.getElementById('btn-train');
+        const btnStop = document.getElementById('btn-stop');
+        
+        btnTrain.onclick = async () => {
+            if (trainer.trainingActive) {
+                console.log('Training already in progress...');
                 return;
             }
             
-            if (typeof TensorFlowRL === 'undefined') {
-                document.getElementById('console').innerHTML += '<div class="console-line">[ERROR] Adaptive RL module not loaded! Check file path.</div>';
-                return;
-            }
+            statusEl.innerHTML = 'TRAINING';
+            statusEl.className = 'status-training';
+            console.log('========================================');
+            console.log('🎮 STARTING TRAINING - 100 Episodes');
+            console.log('🧠 Neural Network: 6 inputs -> 64 -> 64 -> 5 outputs');
+            console.log('🎯 Watch the blue robot learn to chase the golden hill!');
+            console.log('========================================');
             
-            // Create environment with adaptive features
-            const env = new TensorFlowRL.Environment({
-                arenaSize: 20,
-                hillRadius: 2.5,
-                hillMoveInterval: 80,
-                adaptiveInterval: true,
-                adaptiveIntervalRange: { min: 40, max: 160 },
-                agentSpeed: 0.5
-            });
+            // Clear trail
+            trailPositions = [];
             
-            // Create TensorFlow.js DQN agent
-            const agent = new TensorFlowRL.DQNAgent({
-                learningRate: 0.001,
-                discountFactor: 0.95,
-                epsilon: 0.3,
-                epsilonMin: 0.05,
-                epsilonDecay: 0.995,
-                memorySize: 10000,
-                batchSize: 32,
-                targetUpdateFreq: 100
-            });
+            await trainer.train(100, 500);
             
-            // Create trainer
-            const trainer = new TensorFlowRL.Trainer(env, agent);
+            statusEl.innerHTML = 'COMPLETE';
+            console.log('========================================');
+            console.log('✅ TRAINING COMPLETE!');
+            console.log(`📊 Final epsilon: ${agent.epsilon.toFixed(3)}`);
+            console.log('========================================');
             
-            // UI Elements
-            const btnTrain = document.getElementById('btn-train');
-            const btnStop = document.getElementById('btn-stop');
-            const btnReset = document.getElementById('btn-reset');
-            const statusEl = document.getElementById('status');
-            const progressFill = document.getElementById('progress-fill');
-            const episodeEl = document.getElementById('episode');
-            const rewardEl = document.getElementById('reward');
-            const epsilonEl = document.getElementById('epsilon');
-            const lossEl = document.getElementById('loss');
-            const memoryEl = document.getElementById('memory');
-            const stepsEl = document.getElementById('steps');
-            const intervalEl = document.getElementById('interval');
-            const goalChangesEl = document.getElementById('goal-changes');
-            const adaptTimeEl = document.getElementById('adapt-time');
-            const consoleEl = document.getElementById('console');
-            
-            let trainingEpisodes = 0;
-            let bestReward = -Infinity;
-            
-            function logToConsole(message, type = 'info') {
-                const timestamp = new Date().toLocaleTimeString();
-                const color = type === 'error' ? '#ff4444' : (type === 'success' ? '#44ff44' : '#0f0');
-                consoleEl.innerHTML += `<div class="console-line" style="color: ${color};">[${timestamp}] ${message}</div>`;
-                consoleEl.scrollTop = consoleEl.scrollHeight;
-            }
-            
-            // Listen for training updates
-            trainer.onUpdate((data) => {
-                if (data.type === 'step') {
-                    episodeEl.textContent = data.episode;
-                    rewardEl.textContent = Math.floor(data.totalReward);
-                    
-                    if (data.agentMetrics) {
-                        epsilonEl.textContent = data.agentMetrics.epsilon;
-                        memoryEl.textContent = data.agentMetrics.memorySize;
-                        stepsEl.textContent = data.agentMetrics.totalSteps;
-                        lossEl.textContent = data.agentMetrics.lastLoss;
-                    }
-                    
-                    if (data.envMetrics) {
-                        intervalEl.textContent = data.envMetrics.currentInterval;
-                        goalChangesEl.textContent = data.envMetrics.totalGoalChanges;
-                        const adaptTime = data.envMetrics.averageAdaptationTime;
-                        adaptTimeEl.textContent = adaptTime ? adaptTime.toFixed(1) : '--';
-                    }
-                    
-                    if (data.goalMoved) {
-                        logToConsole(`Hill moved to new location! Current interval: ${data.envMetrics?.currentInterval} steps`);
-                    }
-                }
-                
-                if (data.type === 'episode_complete') {
-                    trainingEpisodes = data.episode;
-                    const reward = data.reward;
-                    
-                    if (reward > bestReward) {
-                        bestReward = reward;
-                        logToConsole(` New best reward! Episode ${data.episode}: ${reward.toFixed(1)} points`, 'success');
-                    } else {
-                        logToConsole(`Episode ${data.episode} complete. Reward: ${reward.toFixed(1)}. Epsilon: ${data.agentMetrics.epsilon}. Loss: ${data.agentMetrics.lastLoss}`);
-                    }
-                    
-                    const progress = (data.episode / 100) * 100;
-                    progressFill.style.width = `${Math.min(100, progress)}%`;
-                }
-            });
-            
-            // Button handlers
-            btnTrain.onclick = async () => {
-                if (trainer.trainingActive) {
-                    logToConsole('Training already in progress...');
-                    return;
-                }
-                
-                statusEl.textContent = 'TRAINING';
-                statusEl.className = 'status-training';
-                logToConsole('========================================');
-                logToConsole('STARTING TRAINING - 100 Episodes');
-                logToConsole('========================================');
-                logToConsole(`Neural Network: 6 inputs -> 64 -> 64 -> 5 outputs`);
-                logToConsole(`Learning Rate: 0.001 | Discount Factor: 0.95 | Initial Epsilon: 0.3`);
-                logToConsole('Watch the metrics below - Episode Reward should increase over time!');
-                
-                await trainer.train(100, 500);
-                
-                statusEl.textContent = 'COMPLETE';
-                logToConsole('========================================');
-                logToConsole(`TRAINING COMPLETE! Total episodes: ${trainingEpisodes}`);
-                logToConsole(`Best episode reward: ${bestReward.toFixed(1)}`);
-                logToConsole(`Final epsilon: ${agent.epsilon.toFixed(3)}`);
-                logToConsole('========================================', 'success');
-                
-                setTimeout(() => {
-                    statusEl.textContent = 'IDLE';
-                    statusEl.className = 'status-idle';
-                }, 2000);
-            };
-            
-            btnStop.onclick = () => {
-                trainer.stop();
-                statusEl.textContent = 'STOPPED';
-                logToConsole('Training stopped by user');
-                setTimeout(() => {
-                    statusEl.textContent = 'IDLE';
-                    statusEl.className = 'status-idle';
-                }, 1000);
-            };
-            
-            btnReset.onclick = () => {
-                trainer.stop();
-                logToConsole('Resetting session - page will reload...');
-                setTimeout(() => {
-                    location.reload();
-                }, 500);
-            };
-            
-            // Initial console messages
-            logToConsole(`TensorFlow.js version: ${tf.version.tfjs}`);
-            logToConsole('Adaptive RL Module loaded successfully');
-            logToConsole('Environment: King of the Hill with dynamic goal repositioning');
-            logToConsole('Agent: Deep Q-Network with experience replay and target network');
-            logToConsole('');
-            logToConsole('READY - Click START TRAINING to begin');
-            logToConsole('');
-            logToConsole('What to watch for:');
-            logToConsole('  1. Episode Reward should INCREASE (agent is learning)');
-            logToConsole('  2. Epsilon should DECREASE (agent explores less over time)');
-            logToConsole('  3. Network Loss should DECREASE (predictions get better)');
-            logToConsole('  4. Move Interval changes randomly - watch the agent adapt!');
+            setTimeout(() => {
+                statusEl.innerHTML = 'IDLE';
+                statusEl.className = 'status-idle';
+            }, 2000);
         };
+        
+        btnStop.onclick = () => {
+            trainer.stop();
+            statusEl.innerHTML = 'STOPPED';
+            console.log('⏹️ Training stopped by user');
+            setTimeout(() => {
+                statusEl.innerHTML = 'IDLE';
+                statusEl.className = 'status-idle';
+            }, 1000);
+        };
+        
+        // ================================================================
+        // ANIMATION LOOP
+        // ================================================================
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            updateCamera();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        console.log('🎮 TensorFlow.js Adaptive RL - 3D Visualization Ready!');
+        console.log('🤖 Agent uses Deep Q-Network (6->64->64->5)');
+        console.log('🏔️ Hill moves every N steps, N changes adaptively!');
+        console.log('📊 Click START TRAINING to watch the agent learn');
     </script>
 </body>
 </html>
