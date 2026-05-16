@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table Tennis - Adaptive RL | Full Game</title>
+    <title>Table Tennis - Adaptive RL | Full Controls</title>
     <style>
         * {
             margin: 0;
@@ -101,9 +101,11 @@
         
         .button:hover { transform: scale(1.02); }
         .button-secondary { background: linear-gradient(135deg, #444, #222); color: white; }
+        .button-stop { background: linear-gradient(135deg, #ff4444, #cc0000); color: white; }
         
         .status-playing { background: #00aa44; animation: pulse 1s infinite; }
         .status-idle { background: #666; }
+        .status-stopped { background: #ff4444; }
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -151,6 +153,21 @@
         .sidebar::-webkit-scrollbar { width: 8px; }
         .sidebar::-webkit-scrollbar-track { background: #222; }
         .sidebar::-webkit-scrollbar-thumb { background: #ffaa44; border-radius: 4px; }
+        
+        .serve-indicator {
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .key-hint {
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -159,12 +176,12 @@
         
         <div class="sidebar">
             <h1>🏓 TABLE TENNIS - ADAPTIVE RL</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Continuous Game | AI Learns as You Play</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Full Paddle Movement | Manual Serve</p>
             
             <div class="metric">
                 <div class="metric-row">
                     <span class="metric-label">Game Status:</span>
-                    <span class="metric-value" id="game-status">Playing</span>
+                    <span class="metric-value" id="game-status">Stopped</span>
                 </div>
                 <div class="score-board">
                     <div class="player-score">
@@ -176,8 +193,13 @@
                         <div class="score-number" id="ai-score">0</div>
                     </div>
                 </div>
+                <div class="serve-indicator" id="serve-indicator">
+                    🏓 Game stopped - press START
+                </div>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="button" id="btn-reset">🔄 Reset Score</button>
+                    <button class="button" id="btn-start">▶ Start Game</button>
+                    <button class="button button-stop" id="btn-stop">⏹ Stop Game</button>
+                    <button class="button button-secondary" id="btn-reset">🔄 Reset Score</button>
                 </div>
             </div>
             
@@ -188,41 +210,41 @@
                     <span class="metric-value" id="rallies">0</span>
                 </div>
                 <div class="metric-row">
-                    <span class="metric-label">AI Strategy:</span>
-                    <span class="metric-value" id="ai-strategy">Tracking Ball</span>
+                    <span class="metric-label">AI Level:</span>
+                    <span class="metric-value" id="ai-level">Beginner</span>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="ai-progress"></div>
                 </div>
-                <div id="ai-status" style="font-size: 11px; color: #aaa; margin-top: 5px;">AI is learning from each rally!</div>
+                <div id="ai-status" style="font-size: 11px; color: #aaa; margin-top: 5px;">AI learns from each rally!</div>
             </div>
             
             <h2>🎮 CONTROLS</h2>
             <div class="metric" style="font-size: 12px; line-height: 1.8;">
                 <p><kbd>←</kbd> <kbd>→</kbd> - Move paddle LEFT/RIGHT</p>
                 <p><kbd>↑</kbd> <kbd>↓</kbd> - Move paddle UP/DOWN</p>
+                <p><kbd>W</kbd> <kbd>S</kbd> - Move paddle FORWARD/BACKWARD</p>
                 <p><kbd>SPACE</kbd> - Hit the ball!</p>
-                <p style="margin-top: 10px; color: #ffaa44;">🎯 Hit the ball over the net to score!</p>
+                <p><kbd>E</kbd> - TOSS & SERVE (toss ball up, then hit)</p>
+                <div class="key-hint">💡 To serve: Press E to toss the ball, then SPACE to hit!</div>
             </div>
             
-            <h2>🏓 HOW TO PLAY</h2>
+            <h2>🏓 SERVE RULES</h2>
             <div class="metric" style="font-size: 11px; line-height: 1.5;">
-                <p>1. Game starts automatically</p>
-                <p>2. Move BLUE paddle with arrow keys</p>
-                <p>3. Press SPACE to hit the ball</p>
-                <p>4. Get ball past the RED AI to score</p>
-                <p>5. AI learns from every rally!</p>
-                <p style="margin-top: 8px; color: #88aaff;">🤖 The AI adapts to your playing style!</p>
+                <p>✅ Press <kbd>E</kbd> to toss the ball</p>
+                <p>✅ Then press <kbd>SPACE</kbd> to hit the serve</p>
+                <p>✅ Ball must land on opponent's side</p>
+                <p>✅ You serve when you lost last point</p>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🏓 <strong>CONTINUOUS GAME</strong> - No time limit!<br>
-        🧑 <strong>YOU:</strong> Move paddle with ← → ↑ ↓ | Hit with SPACE<br>
+        🏓 <strong>FULL CONTROLS</strong><br>
+        🧑 <strong>YOU:</strong> ← → = Left/Right | ↑ ↓ = Up/Down | W S = Forward/Back | SPACE = Hit | E = Serve<br>
         🟡 <strong>BALL:</strong> Bright yellow with trail effect<br>
-        🤖 <strong>AI:</strong> Learns from every rally automatically!<br>
-        🎯 <strong>First to 11 wins?</strong> Just keep playing!
+        🤖 <strong>AI:</strong> Learns from every rally!<br>
+        🎯 <strong>Serve:</strong> Press E to toss, then SPACE to hit!
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -230,12 +252,12 @@
     <script>
         (function() {
             console.log('========================================');
-            console.log('🏓 TABLE TENNIS - CONTINUOUS GAME');
+            console.log('🏓 TABLE TENNIS - FULL PADDLE MOVEMENT');
             console.log('========================================');
             
             const container = document.getElementById('canvas-container');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
+            let width = container.clientWidth;
+            let height = container.clientHeight;
             
             // ================================================================
             // THREE.JS SETUP
@@ -287,7 +309,6 @@
             // White lines
             const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
             
-            // Sidelines
             const leftLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
             leftLine.position.set(-2.4, 0.06, 0);
             scene.add(leftLine);
@@ -296,7 +317,6 @@
             rightLine.position.set(2.4, 0.06, 0);
             scene.add(rightLine);
             
-            // Baselines
             const topLine = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
             topLine.position.set(0, 0.06, -4.0);
             scene.add(topLine);
@@ -305,28 +325,24 @@
             bottomLine.position.set(0, 0.06, 4.0);
             scene.add(bottomLine);
             
-            // Center line (vertical)
             const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
             centerLine.position.set(0, 0.06, 0);
             scene.add(centerLine);
             
             // ================================================================
-            // THE NET (VISIBLE!)
+            // THE NET
             // ================================================================
             
-            // Net mesh (semi-transparent)
             const netMatTransparent = new THREE.MeshStandardMaterial({ color: 0xccccaa, transparent: true, opacity: 0.7 });
             const netMesh = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.4, 0.05), netMatTransparent);
             netMesh.position.set(0, 0.25, 0);
             netMesh.castShadow = true;
             scene.add(netMesh);
             
-            // Net tape (white strip on top)
             const netTape = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xffffff }));
             netTape.position.set(0, 0.45, 0);
             scene.add(netTape);
             
-            // Net posts
             const postMatMetal = new THREE.MeshStandardMaterial({ color: 0x888866, metalness: 0.7 });
             const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMatMetal);
             leftPost.position.set(-2.55, 0.3, 0);
@@ -340,19 +356,18 @@
             // PADDLES
             // ================================================================
             
-            // Player paddle (Blue)
-            const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5 }));
-            playerPaddle.position.set(0, 0.5, -3.8);
+            const paddleMatBlue = new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5 });
+            const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMatBlue);
+            playerPaddle.position.set(0, 0.5, -3.5);
             playerPaddle.castShadow = true;
             scene.add(playerPaddle);
             
-            // AI paddle (Red)
-            const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5 }));
-            aiPaddle.position.set(0, 0.5, 3.8);
+            const aiPaddleMat = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5 });
+            const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), aiPaddleMat);
+            aiPaddle.position.set(0, 0.5, 3.5);
             aiPaddle.castShadow = true;
             scene.add(aiPaddle);
             
-            // Handles
             const handleMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
             const playerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
             playerHandle.position.set(0, -0.2, 0);
@@ -371,84 +386,183 @@
             ball.castShadow = true;
             scene.add(ball);
             
-            // Ball trail
             let ballTrail = [];
             const trailMatPoints = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
             let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMatPoints);
             scene.add(trailPoints);
             
             // ================================================================
-            // GAME STATE (CONTINUOUS)
+            // GAME STATE
             // ================================================================
+            
+            // Paddle position (X: left/right, Y: up/down, Z: forward/back)
+            let playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
+            let aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
             
             let ballPos = { x: 0, y: 0.15, z: 0 };
             let ballVel = { x: 0, y: 0, z: 0 };
-            let playerPaddlePos = { x: 0, y: 0.5 };
-            let aiPaddlePos = { x: 0, y: 0.5 };
             
             let playerScore = 0;
             let aiScore = 0;
-            let gameActive = true;
-            let pointActive = true;
+            let gameActive = false;
+            let pointActive = false;
             let rallyCount = 0;
-            let waitingForServe = true;
-            let serveTimer = 0;
             let totalRallies = 0;
+            let lastPointWinner = null;
+            
+            // Serve state
+            let isTossing = false;
+            let tossTimer = 0;
+            let tossHeight = 0;
+            let ballInHand = true;
             
             // Physics
             const GRAVITY = -14;
             const BOUNCE_DAMPING = 0.85;
-            
-            // AI tracking
-            let lastAITime = 0;
+            const PADDLE_SPEED = 8;
+            const PADDLE_Z_MIN = -4.2;
+            const PADDLE_Z_MAX = -2.8;
+            const AI_PADDLE_Z = 3.5;
             
             // Keyboard
-            const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
+            const keys = { 
+                ArrowLeft: false, ArrowRight: false, 
+                ArrowUp: false, ArrowDown: false,
+                KeyW: false, KeyS: false
+            };
             
             // ================================================================
-            // GAME FUNCTIONS
+            // SERVE FUNCTIONS
             // ================================================================
             
-            function serve() {
-                const direction = (Math.random() > 0.5 ? 1 : -1);
-                ballPos = { x: direction * (Math.random() * 1.5), y: 0.15, z: -3.6 };
-                ballVel = { 
-                    x: direction * (2 + Math.random() * 2), 
-                    y: 6 + Math.random() * 3, 
-                    z: 10 + Math.random() * 3 
-                };
-                waitingForServe = false;
-                pointActive = true;
-                console.log('🏓 New rally! Serve!');
+            function startToss() {
+                if (!gameActive) return;
+                if (!pointActive && waitingForServe) {
+                    isTossing = true;
+                    tossTimer = 0;
+                    tossHeight = 0;
+                    ballInHand = true;
+                    ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
+                    ball.visible = true;
+                    console.log('🏓 Tossing ball up...');
+                }
+            }
+            
+            function updateToss(delta) {
+                if (!isTossing) return;
+                
+                tossTimer += delta;
+                
+                if (tossTimer < 0.3) {
+                    // Rising
+                    tossHeight = tossTimer / 0.3 * 0.5;
+                    ballPos.y = 0.2 + tossHeight;
+                    ballPos.x = playerPaddlePos.x;
+                    ballPos.z = playerPaddlePos.z;
+                } else if (tossTimer < 0.6) {
+                    // Falling
+                    tossHeight = (0.6 - tossTimer) / 0.3 * 0.5;
+                    ballPos.y = 0.2 + tossHeight;
+                    ballPos.x = playerPaddlePos.x;
+                    ballPos.z = playerPaddlePos.z;
+                } else {
+                    // Toss complete, ball back in hand
+                    isTossing = false;
+                    ballInHand = true;
+                    ballPos.y = 0.2;
+                    console.log('🏓 Ball ready - press SPACE to serve!');
+                }
+                
+                ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+            }
+            
+            function executeServe() {
+                if (!gameActive) return;
+                if (!pointActive && waitingForServe && !isTossing && ballInHand) {
+                    // Hit the serve
+                    const direction = (Math.random() > 0.5 ? 1 : -1);
+                    ballVel = {
+                        x: direction * (3 + Math.random() * 2),
+                        y: 5 + Math.random() * 3,
+                        z: 12
+                    };
+                    ballPos = { x: playerPaddlePos.x, y: 0.3, z: playerPaddlePos.z };
+                    ballInHand = false;
+                    waitingForServe = false;
+                    pointActive = true;
+                    rallyCount = 0;
+                    console.log('🏓 Serve hit! Rally started!');
+                    
+                    // Visual feedback
+                    ballMat.emissiveIntensity = 0.8;
+                    setTimeout(() => { ballMat.emissiveIntensity = 0.4; }, 200);
+                } else if (isTossing) {
+                    // Hit during toss
+                    const direction = (Math.random() > 0.5 ? 1 : -1);
+                    ballVel = {
+                        x: direction * (3 + Math.random() * 2),
+                        y: 4 + Math.random() * 3,
+                        z: 12
+                    };
+                    ballPos = { x: playerPaddlePos.x, y: ballPos.y, z: playerPaddlePos.z };
+                    isTossing = false;
+                    ballInHand = false;
+                    waitingForServe = false;
+                    pointActive = true;
+                    rallyCount = 0;
+                    console.log('🏓 Serve hit during toss!');
+                    
+                    ballMat.emissiveIntensity = 0.8;
+                    setTimeout(() => { ballMat.emissiveIntensity = 0.4; }, 200);
+                }
             }
             
             function resetPoint(winner) {
                 if (winner === 'player') {
                     playerScore++;
-                    console.log('🏆 You score!');
+                    console.log('🏆 You win the point!');
                 } else {
                     aiScore++;
-                    console.log('🤖 AI scores!');
+                    console.log('🤖 AI wins the point!');
                 }
+                
+                lastPointWinner = winner;
                 totalRallies++;
                 updateUI();
                 
+                // Reset for next point
                 waitingForServe = true;
                 pointActive = false;
-                serveTimer = 1.2;
+                ballInHand = true;
+                isTossing = false;
                 ballTrail = [];
                 
-                // Update AI progress bar
+                // Reset ball position
+                ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
+                ballVel = { x: 0, y: 0, z: 0 };
+                ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+                ball.visible = true;
+                
+                // Determine who serves next
+                if (winner === 'player') {
+                    document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT 🤖<br><span style="font-size:10px">Press START when ready</span>';
+                } else {
+                    document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE NEXT 🏓<br><span style="font-size:10px">Press E to toss, then SPACE to serve</span>';
+                }
+                
+                // Update AI progress
                 const progress = Math.min(100, (totalRallies / 50) * 100);
                 document.getElementById('ai-progress').style.width = `${progress}%`;
                 document.getElementById('rallies').textContent = totalRallies;
                 
                 if (totalRallies < 10) {
-                    document.getElementById('ai-status').innerHTML = 'AI is learning your patterns...';
+                    document.getElementById('ai-level').textContent = 'Beginner';
                 } else if (totalRallies < 30) {
-                    document.getElementById('ai-status').innerHTML = 'AI is getting better!';
+                    document.getElementById('ai-level').textContent = 'Intermediate';
+                } else if (totalRallies < 60) {
+                    document.getElementById('ai-level').textContent = 'Advanced';
                 } else {
-                    document.getElementById('ai-status').innerHTML = 'AI has adapted to your style!';
+                    document.getElementById('ai-level').textContent = 'Expert';
                 }
             }
             
@@ -456,16 +570,20 @@
                 if (!pointActive) return;
                 
                 // Ball hit floor on player side
-                if (ballPos.z < -4.2 && ballVel.z < 0) {
+                if (ballPos.z < -4.3 && ballVel.z < 0) {
                     resetPoint('ai');
                 }
                 // Ball hit floor on AI side
-                else if (ballPos.z > 4.2 && ballVel.z > 0) {
+                else if (ballPos.z > 4.3 && ballVel.z > 0) {
                     resetPoint('player');
                 }
                 // Ball hit net
                 else if (Math.abs(ballPos.z) < 0.15 && ballPos.y < 0.2 && Math.abs(ballPos.z) > 0.05) {
-                    resetPoint(Math.random() > 0.5 ? 'player' : 'ai');
+                    if (ballVel.z > 0) {
+                        resetPoint('player');
+                    } else {
+                        resetPoint('ai');
+                    }
                 }
                 // Ball out sideways
                 else if (Math.abs(ballPos.x) > 2.9) {
@@ -473,67 +591,69 @@
                 }
             }
             
+            // ================================================================
+            // GAME ACTIONS
+            // ================================================================
+            
             function handlePlayerHit() {
+                if (!gameActive) return;
+                
+                // Serve case
+                if (!pointActive && waitingForServe && !isTossing && ballInHand) {
+                    executeServe();
+                    return;
+                }
+                
+                // Regular hit during rally
                 if (!pointActive || waitingForServe) return;
                 
-                const distToPaddle = Math.abs(ballPos.z - (-3.8));
+                const distToPaddle = Math.abs(ballPos.z - playerPaddlePos.z);
                 const hitX = Math.abs(ballPos.x - playerPaddlePos.x);
                 const hitY = Math.abs(ballPos.y - playerPaddlePos.y);
                 
                 if (distToPaddle < 0.3 && hitX < 0.4 && hitY < 0.5 && ballVel.z < 0) {
-                    // Successful hit
                     ballVel.x = (ballPos.x - playerPaddlePos.x) * 5 + (Math.random() - 0.5) * 2.5;
                     ballVel.y = 5.5 + Math.random() * 4;
                     ballVel.z = 12;
                     rallyCount++;
                     
-                    // Visual feedback
                     ballMat.emissiveIntensity = 0.9;
                     setTimeout(() => { ballMat.emissiveIntensity = 0.4; }, 100);
                     playerPaddle.material.emissiveIntensity = 0.4;
                     setTimeout(() => { playerPaddle.material.emissiveIntensity = 0; }, 80);
+                    
+                    console.log(`🏓 Hit! Rally: ${rallyCount}`);
                 }
             }
             
-            function updateAI(delta, now) {
+            function updateAI(delta) {
+                if (!gameActive) return;
                 if (!pointActive || waitingForServe) return;
                 
-                // AI predicts where to move
+                const aiReactionTime = Math.max(0.08, 0.2 - (totalRallies / 500));
+                const aiAccuracy = Math.min(0.8, 0.3 + (totalRallies / 200));
+                
                 let targetX = Math.max(-2.3, Math.min(2.3, ballPos.x));
                 let targetY = Math.max(0.2, Math.min(1.2, ballPos.y + 0.3));
                 
-                // AI movement speed increases with experience
-                const aiSpeed = Math.min(0.25, 0.12 + (totalRallies / 500));
+                const aiSpeed = Math.min(0.25, 0.1 + (totalRallies / 500));
                 aiPaddlePos.x += (targetX - aiPaddlePos.x) * aiSpeed;
                 aiPaddlePos.y += (targetY - aiPaddlePos.y) * aiSpeed;
-                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.8);
+                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, AI_PADDLE_Z);
                 
-                // AI hits the ball
-                const distToBall = Math.abs(ballPos.z - 3.8);
+                const distToBall = Math.abs(ballPos.z - AI_PADDLE_Z);
                 if (distToBall < 0.3 && ballVel.z > 0) {
                     const hitX = Math.abs(ballPos.x - aiPaddlePos.x);
                     const hitY = Math.abs(ballPos.y - aiPaddlePos.y);
                     
                     if (hitX < 0.45 && hitY < 0.55) {
-                        // AI hit - becomes more accurate with experience
-                        const accuracy = Math.min(0.8, 0.3 + (totalRallies / 200));
-                        ballVel.x = (ballPos.x - aiPaddlePos.x) * 4 + (Math.random() - 0.5) * (1.5 - accuracy);
+                        ballVel.x = (ballPos.x - aiPaddlePos.x) * 4 + (Math.random() - 0.5) * (1.5 - aiAccuracy);
                         ballVel.y = 4.5 + Math.random() * 4;
                         ballVel.z = -11.5;
                         rallyCount++;
                         
-                        // Visual feedback
                         aiPaddle.material.emissiveIntensity = 0.4;
                         setTimeout(() => { aiPaddle.material.emissiveIntensity = 0; }, 80);
-                        
-                        // Update AI strategy display
-                        if (totalRallies > 20) {
-                            document.getElementById('ai-strategy').textContent = 'Adapting to You';
-                        } else if (totalRallies > 10) {
-                            document.getElementById('ai-strategy').textContent = 'Learning Patterns';
-                        } else {
-                            document.getElementById('ai-strategy').textContent = 'Tracking Ball';
-                        }
                     }
                 }
             }
@@ -541,11 +661,7 @@
             function updatePhysics(delta) {
                 if (!pointActive) return;
                 
-                if (waitingForServe) {
-                    serveTimer -= delta;
-                    if (serveTimer <= 0) serve();
-                    return;
-                }
+                if (waitingForServe) return;
                 
                 ballVel.y += GRAVITY * delta;
                 ballPos.x += ballVel.x * delta;
@@ -570,11 +686,9 @@
                     ballPos.y = 0.12;
                 }
                 
-                // Clamp positions
-                ballPos.x = Math.max(-2.7, Math.min(2.7, ballPos.x));
+                ballPos.x = Math.max(-2.8, Math.min(2.8, ballPos.x));
                 ballPos.z = Math.max(-4.5, Math.min(4.5, ballPos.z));
                 
-                // Update 3D objects
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
                 ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
                 
@@ -596,17 +710,28 @@
             }
             
             function updatePlayerPaddle(delta) {
+                if (!gameActive) return;
+                
                 let newX = playerPaddlePos.x;
                 let newY = playerPaddlePos.y;
+                let newZ = playerPaddlePos.z;
                 
-                if (keys.ArrowLeft) newX -= 7 * delta;
-                if (keys.ArrowRight) newX += 7 * delta;
-                if (keys.ArrowDown) newY -= 6 * delta;
-                if (keys.ArrowUp) newY += 6 * delta;
+                // Left/Right
+                if (keys.ArrowLeft) newX -= PADDLE_SPEED * delta;
+                if (keys.ArrowRight) newX += PADDLE_SPEED * delta;
+                
+                // Up/Down
+                if (keys.ArrowDown) newY -= PADDLE_SPEED * 0.8 * delta;
+                if (keys.ArrowUp) newY += PADDLE_SPEED * 0.8 * delta;
+                
+                // Forward/Backward (W/S)
+                if (keys.KeyW) newZ += PADDLE_SPEED * 0.8 * delta;
+                if (keys.KeyS) newZ -= PADDLE_SPEED * 0.8 * delta;
                 
                 playerPaddlePos.x = Math.max(-2.3, Math.min(2.3, newX));
                 playerPaddlePos.y = Math.max(0.2, Math.min(1.2, newY));
-                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, -3.8);
+                playerPaddlePos.z = Math.max(PADDLE_Z_MIN, Math.min(PADDLE_Z_MAX, newZ));
+                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, playerPaddlePos.z);
             }
             
             function updateUI() {
@@ -614,50 +739,106 @@
                 document.getElementById('ai-score').textContent = aiScore;
             }
             
+            function resetGame() {
+                playerScore = 0;
+                aiScore = 0;
+                totalRallies = 0;
+                rallyCount = 0;
+                lastPointWinner = null;
+                waitingForServe = true;
+                pointActive = false;
+                ballInHand = true;
+                isTossing = false;
+                ballPos = { x: 0, y: 0.2, z: -3.5 };
+                ballVel = { x: 0, y: 0, z: 0 };
+                ballTrail = [];
+                playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
+                aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
+                ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, playerPaddlePos.z);
+                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, aiPaddlePos.z);
+                
+                updateUI();
+                document.getElementById('ai-progress').style.width = '0%';
+                document.getElementById('rallies').textContent = '0';
+                document.getElementById('ai-level').textContent = 'Beginner';
+                document.getElementById('serve-indicator').innerHTML = '🏓 Game reset - press START<br><span style="font-size:10px">You serve first!</span>';
+                
+                console.log('🔄 Game reset!');
+            }
+            
+            function startGame() {
+                gameActive = true;
+                resetGame();
+                waitingForServe = true;
+                pointActive = false;
+                ballInHand = true;
+                isTossing = false;
+                lastPointWinner = null;
+                document.getElementById('game-status').textContent = "Playing";
+                document.getElementById('game-status').className = 'status-playing';
+                document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE 🏓<br><span style="font-size:10px">Press E to toss, then SPACE to serve</span>';
+                console.log('🎮 GAME STARTED! Press E to toss, then SPACE to serve!');
+            }
+            
+            function stopGame() {
+                gameActive = false;
+                pointActive = false;
+                waitingForServe = true;
+                document.getElementById('game-status').textContent = "Stopped";
+                document.getElementById('game-status').className = 'status-stopped';
+                document.getElementById('serve-indicator').innerHTML = '🏓 Game stopped - press START';
+                console.log('⏹️ Game stopped!');
+            }
+            
             // ================================================================
             // EVENT HANDLERS
             // ================================================================
             
             window.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                    keys[e.key] = true;
+                // Movement keys
+                if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || 
+                    e.code === 'ArrowUp' || e.code === 'ArrowDown' ||
+                    e.code === 'KeyW' || e.code === 'KeyS') {
+                    keys[e.code] = true;
                     e.preventDefault();
                 }
-                if (e.key === ' ') {
+                // Space to hit
+                if (e.code === 'Space') {
                     e.preventDefault();
                     handlePlayerHit();
+                }
+                // E to toss
+                if (e.code === 'KeyE') {
+                    e.preventDefault();
+                    startToss();
                 }
             });
             
             window.addEventListener('keyup', function(e) {
-                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                    keys[e.key] = false;
+                if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || 
+                    e.code === 'ArrowUp' || e.code === 'ArrowDown' ||
+                    e.code === 'KeyW' || e.code === 'KeyS') {
+                    keys[e.code] = false;
                     e.preventDefault();
                 }
             });
             
+            document.getElementById('btn-start').onclick = startGame;
+            document.getElementById('btn-stop').onclick = stopGame;
             document.getElementById('btn-reset').onclick = function() {
-                playerScore = 0;
-                aiScore = 0;
-                totalRallies = 0;
-                waitingForServe = true;
-                serveTimer = 1;
-                ballPos = { x: 0, y: 0.15, z: 0 };
-                ballVel = { x: 0, y: 0, z: 0 };
-                ballTrail = [];
-                updateUI();
-                document.getElementById('ai-progress').style.width = '0%';
-                document.getElementById('rallies').textContent = '0';
-                document.getElementById('ai-status').innerHTML = 'AI is learning from each rally!';
-                document.getElementById('ai-strategy').textContent = 'Tracking Ball';
-                console.log('🔄 Game reset! Scores cleared.');
+                if (gameActive) {
+                    resetGame();
+                } else {
+                    resetGame();
+                }
             };
             
-            // Start game automatically
-            gameActive = true;
-            waitingForServe = true;
-            serveTimer = 1;
-            console.log('🏓 GAME STARTED! Use arrow keys to move, SPACE to hit!');
+            // ================================================================
+            // GAME STATE VARIABLES
+            // ================================================================
+            
+            let waitingForServe = true;
             
             // ================================================================
             // ANIMATION LOOP
@@ -671,11 +852,10 @@
                 if (delta < 0.01) delta = 0.016;
                 lastTime = now;
                 
-                if (gameActive) {
-                    updatePlayerPaddle(delta);
-                    updateAI(delta, now);
-                    updatePhysics(delta);
-                }
+                updatePlayerPaddle(delta);
+                updateToss(delta);
+                updateAI(delta);
+                updatePhysics(delta);
                 
                 // Subtle animations
                 playerPaddle.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
@@ -688,28 +868,27 @@
             animate();
             
             window.addEventListener('resize', function() {
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                camera.aspect = w / h;
+                width = container.clientWidth;
+                height = container.clientHeight;
+                camera.aspect = width / height;
                 camera.updateProjectionMatrix();
-                renderer.setSize(w, h);
+                renderer.setSize(width, height);
             });
             
             console.log('========================================');
             console.log('🏓 TABLE TENNIS READY!');
             console.log('');
-            console.log('FEATURES:');
-            console.log('  ✅ Visible net across the middle');
-            console.log('  ✅ Continuous gameplay (no time limit)');
-            console.log('  ✅ AI learns as you play');
-            console.log('  ✅ Ball trail effect');
-            console.log('  ✅ Real physics with gravity and bounce');
+            console.log('FULL CONTROLS:');
+            console.log('  ← →  = Move paddle LEFT/RIGHT');
+            console.log('  ↑ ↓  = Move paddle UP/DOWN');
+            console.log('  W S  = Move paddle FORWARD/BACKWARD');
+            console.log('  E    = Toss the ball (for serving)');
+            console.log('  SPACE = Hit the ball / Serve');
             console.log('');
-            console.log('HOW TO PLAY:');
-            console.log('  1. Move BLUE paddle with ← → ↑ ↓');
-            console.log('  2. Press SPACE to hit the ball');
-            console.log('  3. Hit past the RED AI to score');
-            console.log('  4. AI gets smarter the more you play!');
+            console.log('HOW TO SERVE:');
+            console.log('  1. Press E to toss the ball up');
+            console.log('  2. Press SPACE to hit the serve');
+            console.log('  3. Ball must land on opponent\'s side');
             console.log('========================================');
         })();
     </script>
