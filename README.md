@@ -141,13 +141,5 @@ Version 2 uses a **Neural Network** to approximate Q-values instead of storing t
 
 Both versions share the same adaptive environment:
 
-### 1. Dynamic Goal Repositioning
-
-```javascript
-// The hill moves every N steps
-if (stepsSinceLastMove >= currentInterval) {
-    goalPos = getRandomPosition();
-    stepsSinceLastMove = 0;
-}
-
-![Game Screenshot](https://raw.githubusercontent.com/citrudevmobile/adaptive-gym-env-demo/Screenshot From 2026-05-16 17-21-26.png)
+### Dynamic Goal Repositioning
+![Game Screenshot](https://raw.githubusercontent.com/citrudevmobile/adaptive-gym-env-demo/Screenshot From 2026-05-16
