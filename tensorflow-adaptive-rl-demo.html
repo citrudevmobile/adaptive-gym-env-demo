@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TensorFlow.js DQN - YOU vs AI (Full Camera + Training)</title>
+    <title>TensorFlow.js DQN - YOU vs AI (Fixed)</title>
     <style>
         * {
             margin: 0;
@@ -318,20 +318,22 @@
         🧠 <strong>Train AI first</strong> - then play against a smarter opponent!
     </div>
 
-    <!-- Three.js for 3D visualization -->
+    <!-- TensorFlow.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
             }
         }
     </script>
     
-    <!-- TensorFlow.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
-    
     <script type="module">
+        // Import Three.js and the CSS2D addon properly
         import * as THREE from 'three';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
         
         // ============================================
         // THREE.JS VISUALIZATION SETUP
@@ -342,7 +344,7 @@
         scene.background = new THREE.Color(0x0a1030);
         scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
         
-        // FIXED CAMERA: Top-down view that shows EVERYTHING
+        // Fixed camera: Top-down view that shows EVERYTHING
         const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
         camera.position.set(0, 28, 0);
         camera.lookAt(0, 0, 0);
@@ -351,6 +353,15 @@
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
+        
+        // CSS2 Renderer for text labels
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(labelRenderer.domElement);
         
         // Lights
         const ambientLight = new THREE.AmbientLight(0x404060);
@@ -414,7 +425,7 @@
         const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
         scene.add(hillLight);
         
-        // Add a floating label above the hill
+        // Add a floating label above the hill using CSS2DObject
         const hillLabelDiv = document.createElement('div');
         hillLabelDiv.textContent = '🏆 HILL 🏆';
         hillLabelDiv.style.color = '#ffaa44';
@@ -424,18 +435,10 @@
         hillLabelDiv.style.background = 'rgba(0,0,0,0.6)';
         hillLabelDiv.style.padding = '2px 10px';
         hillLabelDiv.style.borderRadius = '20px';
-        const hillLabel = new THREE.CSS2DObject(hillLabelDiv);
+        hillLabelDiv.style.whiteSpace = 'nowrap';
+        const hillLabel = new CSS2DObject(hillLabelDiv);
         hillLabel.position.y = 2.0;
         hillGroup.add(hillLabel);
-        
-        // Need CSS2DRenderer for labels
-        const labelRenderer = new THREE.CSS2DRenderer();
-        labelRenderer.setSize(container.clientWidth, container.clientHeight);
-        labelRenderer.domElement.style.position = 'absolute';
-        labelRenderer.domElement.style.top = '0px';
-        labelRenderer.domElement.style.left = '0px';
-        labelRenderer.domElement.style.pointerEvents = 'none';
-        container.appendChild(labelRenderer.domElement);
         
         // ============================================
         // HUMAN PLAYER (BLUE)
@@ -481,7 +484,8 @@
         humanLabelDiv.style.background = 'rgba(0,0,0,0.5)';
         humanLabelDiv.style.padding = '2px 8px';
         humanLabelDiv.style.borderRadius = '12px';
-        const humanLabel = new THREE.CSS2DObject(humanLabelDiv);
+        humanLabelDiv.style.whiteSpace = 'nowrap';
+        const humanLabel = new CSS2DObject(humanLabelDiv);
         humanLabel.position.y = 1.2;
         humanGroup.add(humanLabel);
         
@@ -535,7 +539,8 @@
         agentLabelDiv.style.background = 'rgba(0,0,0,0.5)';
         agentLabelDiv.style.padding = '2px 8px';
         agentLabelDiv.style.borderRadius = '12px';
-        const agentLabel = new THREE.CSS2DObject(agentLabelDiv);
+        agentLabelDiv.style.whiteSpace = 'nowrap';
+        const agentLabel = new CSS2DObject(agentLabelDiv);
         agentLabel.position.y = 1.2;
         agentGroup.add(agentLabel);
         
@@ -619,7 +624,7 @@
                 
                 this.optimizer = tf.train.adam(this.learningRate);
                 
-                console.log('🤖 AI Agent initialized with neural network');
+                console.log('AI Agent initialized with neural network');
             }
             
             _buildNetwork() {
@@ -790,11 +795,6 @@
                     episodes: this.trainingEpisodes
                 };
             }
-            
-            async saveModel() {
-                await this.mainNetwork.save('downloads://ai-model');
-                console.log('💾 Model saved!');
-            }
         }
         
         const aiAgent = new TrainableDQNAgent();
@@ -805,6 +805,14 @@
         
         let isTraining = false;
         
+        function getRandomPosition() {
+            const margin = 3;
+            return {
+                x: (Math.random() - 0.5) * (arenaBounds - margin) * 2,
+                z: (Math.random() - 0.5) * (arenaBounds - margin) * 2
+            };
+        }
+        
         async function trainAI(episodes = 100) {
             if (isTraining) {
                 console.log('Training already in progress...');
@@ -814,24 +822,20 @@
             isTraining = true;
             document.getElementById('game-status').textContent = "TRAINING AI";
             document.getElementById('game-status').className = 'status-training';
-            console.log('🧠 Starting AI Training...');
+            console.log('Starting AI Training...');
             console.log('This will teach the AI to chase the hill!');
             
             for (let ep = 0; ep < episodes; ep++) {
-                // Reset for new episode
-                let tHumanPos = { x: (Math.random() - 0.5) * (arenaBounds - 6) * 2, z: (Math.random() - 0.5) * (arenaBounds - 6) * 2 };
                 let tAgentPos = { x: (Math.random() - 0.5) * (arenaBounds - 6) * 2, z: (Math.random() - 0.5) * (arenaBounds - 6) * 2 };
                 let tHillPos = getRandomPosition();
                 let tStepsSinceLastMove = 0;
                 let tCurrentInterval = 80;
                 let tMoveTimer = 8.0;
-                let tStepCount = 0;
                 let tEpisodeReward = 0;
                 
                 for (let step = 0; step < 400; step++) {
                     tStepsSinceLastMove++;
                     
-                    // AI decides action
                     const obs = aiAgent._getObservation(tAgentPos, tHillPos, tStepsSinceLastMove, tCurrentInterval, false);
                     let action;
                     if (Math.random() < aiAgent.epsilon) {
@@ -859,7 +863,6 @@
                     
                     tEpisodeReward += reward;
                     
-                    // Move hill occasionally
                     tMoveTimer -= 0.1;
                     if (tMoveTimer <= 0) {
                         tHillPos = getRandomPosition();
@@ -878,27 +881,19 @@
                 
                 if ((ep + 1) % 10 === 0) {
                     const metrics = aiAgent.getMetrics();
-                    console.log(`📊 Training Episode ${ep + 1}/${episodes} | Reward: ${tEpisodeReward.toFixed(1)} | ε: ${metrics.epsilon} | Loss: ${metrics.lastLoss}`);
+                    console.log(`Training Episode ${ep + 1}/${episodes} | Reward: ${tEpisodeReward.toFixed(1)} | ε: ${metrics.epsilon} | Loss: ${metrics.lastLoss}`);
                     document.getElementById('train-progress').style.width = `${((ep + 1) / episodes) * 100}%`;
                 }
                 
-                // Small delay to let UI update
                 await new Promise(r => setTimeout(r, 5));
             }
             
             isTraining = false;
             document.getElementById('game-status').textContent = "Ready";
             document.getElementById('game-status').className = 'status-idle';
-            console.log('✅ AI Training Complete! The AI is now smarter!');
-            console.log(`📊 Final epsilon: ${aiAgent.epsilon.toFixed(3)} | Loss: ${aiAgent.lastLoss.toFixed(4)}`);
-        }
-        
-        function getRandomPosition() {
-            const margin = 3;
-            return {
-                x: (Math.random() - 0.5) * (arenaBounds - margin) * 2,
-                z: (Math.random() - 0.5) * (arenaBounds - margin) * 2
-            };
+            console.log('AI Training Complete! The AI is now smarter!');
+            const metrics = aiAgent.getMetrics();
+            console.log(`Final epsilon: ${metrics.epsilon} | Loss: ${metrics.lastLoss}`);
         }
         
         function getDistance(pos1, pos2) {
@@ -1000,7 +995,7 @@
                 gameActive = false;
                 document.getElementById('game-status').textContent = "GAME OVER";
                 document.getElementById('game-status').className = 'status-idle';
-                console.log(`🏆 GAME OVER! Final - You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
+                console.log(`GAME OVER! Final - You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
                 return;
             }
             
@@ -1028,7 +1023,7 @@
                     } else {
                         currentInterval = Math.min(160, currentInterval * 1.2);
                     }
-                    console.log(`🌍 Interval: ${oldInterval} → ${currentInterval}`);
+                    console.log(`Interval: ${oldInterval} → ${currentInterval}`);
                 }
             }
             
@@ -1152,7 +1147,7 @@
             
             document.getElementById('game-status').textContent = "PLAYING";
             document.getElementById('game-status').className = 'status-playing';
-            console.log('🎮 GAME STARTED! Use WASD to move BLUE robot. Stand on GOLD HILL to score!');
+            console.log('GAME STARTED! Use WASD to move BLUE robot. Stand on GOLD HILL to score!');
         };
         
         document.getElementById('btn-train').onclick = async () => {
@@ -1177,7 +1172,7 @@
             
             document.getElementById('game-status').textContent = "Ready";
             document.getElementById('game-status').className = 'status-idle';
-            console.log('🔄 Game reset. Train AI first or click START GAME!');
+            console.log('Game reset. Train AI first or click START GAME!');
         };
         
         // ============================================
@@ -1216,16 +1211,16 @@
             labelRenderer.setSize(width, height);
         });
         
-        console.log('🎮 TWO PLAYER - TensorFlow.js DQN (FULL VERSION)');
         console.log('================================================');
-        console.log('🧑 YOU: Blue robot | Control with WASD or Arrow Keys');
-        console.log('🤖 AI: Red robot | Neural Network DQN (6→64→64→5)');
-        console.log('📷 CAMERA: Shows ALL - You, AI, and the Hill!');
-        console.log('🚫 COLLISION: Players bounce off each other');
-        console.log('🧠 TRAINING: Click "Train AI" first to make the AI smarter!');
-        console.log('🏆 Goal: Stand on the GOLDEN HILL to earn points');
+        console.log('TWO PLAYER - TensorFlow.js DQN (FULL VERSION)');
+        console.log('================================================');
+        console.log('YOU: Blue robot | Control with WASD or Arrow Keys');
+        console.log('AI: Red robot | Neural Network DQN (6→64→64→5)');
+        console.log('CAMERA: Shows ALL - You, AI, and the Hill!');
+        console.log('COLLISION: Players bounce off each other');
+        console.log('TRAINING: Click "Train AI" first to make the AI smarter!');
+        console.log('Goal: Stand on the GOLDEN HILL to earn points');
         console.log('================================================');
     </script>
-</script>
 </body>
 </html>
