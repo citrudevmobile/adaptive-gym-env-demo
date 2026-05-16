@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TensorFlow.js DQN - YOU vs AI (Working)</title>
+    <title>TensorFlow.js DQN - YOU vs AI</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', monospace;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
             overflow: hidden;
@@ -29,7 +29,6 @@
             background: #0a1030;
         }
         
-        /* HTML overlay for labels - simple and works everywhere */
         .label-overlay {
             position: absolute;
             pointer-events: none;
@@ -56,19 +55,8 @@
             z-index: 10;
         }
         
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #ffaa44;
-        }
-        
-        h2 {
-            font-size: 1.1rem;
-            margin: 15px 0 10px 0;
-            color: #88aaff;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 5px;
-        }
+        h1 { font-size: 1.5rem; margin-bottom: 10px; color: #ffaa44; }
+        h2 { font-size: 1.1rem; margin: 15px 0 10px 0; color: #88aaff; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
         
         .metric {
             background: rgba(0,0,0,0.5);
@@ -84,15 +72,8 @@
             margin: 5px 0;
         }
         
-        .metric-label {
-            color: #aaa;
-        }
-        
-        .metric-value {
-            color: #ffaa44;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
+        .metric-label { color: #aaa; }
+        .metric-value { color: #ffaa44; font-weight: bold; font-size: 1.2rem; }
         
         .human-score {
             background: rgba(68, 170, 255, 0.3);
@@ -132,41 +113,13 @@
             transition: transform 0.2s;
         }
         
-        .button:hover {
-            transform: scale(1.02);
-        }
+        .button:hover { transform: scale(1.02); }
+        .button:active { transform: scale(0.98); }
+        .button-secondary { background: linear-gradient(135deg, #444, #222); color: white; }
         
-        .button:active {
-            transform: scale(0.98);
-        }
-        
-        .button-secondary {
-            background: linear-gradient(135deg, #444, #222);
-            color: white;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-        
-        .status-playing {
-            background: #00aa44;
-            animation: pulse 1s infinite;
-        }
-        
-        .status-idle {
-            background: #666;
-        }
-        
-        .status-training {
-            background: #ffaa44;
-            color: #1a1a2e;
-            animation: pulse 1s infinite;
-        }
+        .status-playing { background: #00aa44; animation: pulse 1s infinite; }
+        .status-idle { background: #666; }
+        .status-training { background: #ffaa44; color: #1a1a2e; animation: pulse 1s infinite; }
         
         .controls-info {
             position: absolute;
@@ -206,18 +159,17 @@
             transition: width 0.3s;
         }
         
-        .sidebar::-webkit-scrollbar {
-            width: 8px;
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
         }
         
-        .sidebar::-webkit-scrollbar-track {
-            background: #222;
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb {
-            background: #ffaa44;
-            border-radius: 4px;
-        }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #222; }
+        .sidebar::-webkit-scrollbar-thumb { background: #ffaa44; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -242,7 +194,7 @@
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                     <button class="button" id="btn-start">▶ Start Game (60s)</button>
-                    <button class="button" id="btn-train">🧠 Train AI (30 episodes)</button>
+                    <button class="button" id="btn-train">🧠 Train AI (20 episodes)</button>
                     <button class="button button-secondary" id="btn-reset">🔄 Reset</button>
                 </div>
             </div>
@@ -271,7 +223,7 @@
                 </div>
             </div>
             
-            <h2>🧠 AI LEARNING PROGRESS</h2>
+            <h2>🧠 AI LEARNING</h2>
             <div class="metric">
                 <div class="metric-row">
                     <span class="metric-label">Neural Network:</span>
@@ -284,10 +236,6 @@
                 <div class="metric-row">
                     <span class="metric-label">Exploration (ε):</span>
                     <span class="metric-value" id="epsilon">0.30</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">Memory Size:</span>
-                    <span class="metric-value" id="memory">0</span>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="train-progress"></div>
@@ -318,809 +266,720 @@
                 <p><kbd>A</kbd> / <kbd>←</kbd> - Move LEFT</p>
                 <p><kbd>D</kbd> / <kbd>→</kbd> - Move RIGHT</p>
                 <p style="margin-top: 10px; color: #ffaa44;">🏆 Stand on GOLDEN HILL to score!</p>
-                <p style="color: #88aaff;">🤖 Train AI first (30 episodes) - takes about 15 seconds!</p>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🎮 <strong>CAMERA shows ALL:</strong> You (Blue) + AI (Red) + Hill (Gold)<br>
+        🎮 <strong>YOU are BLUE</strong> | WASD or Arrow Keys<br>
+        🤖 <strong>AI is RED</strong> | Neural Network DQN<br>
         🟡 <strong>Stand on GOLD HILL</strong> to earn points!<br>
-        🚫 <strong>Collision Detection:</strong> Players bounce off each other<br>
-        🧠 <strong>Train AI first (30 episodes)</strong> - then play!
+        🧠 <strong>Train AI first</strong> (20 episodes) - takes ~10 seconds
     </div>
 
-    <!-- Load all scripts from CDN -->
+    <!-- Load Three.js and TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     
     <script>
-        // Wait for everything to load
-        window.onload = function() {
-            
+        (function() {
             console.log('Starting game...');
-            console.log('TensorFlow.js version:', tf.version.tfjs);
             
-            // ============================================
-            // THREE.JS VISUALIZATION SETUP
-            // ============================================
-            
-            const container = document.getElementById('canvas-container');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-            
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a1030);
-            scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
-            
-            // Fixed camera: Top-down view showing everything
-            const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
-            camera.position.set(0, 28, 0);
-            camera.lookAt(0, 0, 0);
-            
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(width, height);
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
-            
-            // Create HTML overlay for labels (no CSS2DRenderer needed!)
-            const labelContainer = document.createElement('div');
-            labelContainer.style.position = 'absolute';
-            labelContainer.style.top = '0';
-            labelContainer.style.left = '0';
-            labelContainer.style.width = '100%';
-            labelContainer.style.height = '100%';
-            labelContainer.style.pointerEvents = 'none';
-            labelContainer.style.zIndex = '100';
-            container.appendChild(labelContainer);
-            
-            function updateLabelPosition(label, x, y) {
-                label.style.left = `${x}px`;
-                label.style.top = `${y}px`;
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
             }
             
-            // Create labels
-            const hillLabel = document.createElement('div');
-            hillLabel.textContent = '🏆 HILL 🏆';
-            hillLabel.className = 'label-overlay';
-            hillLabel.style.borderColor = '#ffaa44';
-            hillLabel.style.color = '#ffaa44';
-            labelContainer.appendChild(hillLabel);
-            
-            const humanLabel = document.createElement('div');
-            humanLabel.textContent = '🧑 YOU';
-            humanLabel.className = 'label-overlay';
-            humanLabel.style.borderColor = '#44aaff';
-            humanLabel.style.color = '#44aaff';
-            labelContainer.appendChild(humanLabel);
-            
-            const agentLabel = document.createElement('div');
-            agentLabel.textContent = '🤖 AI';
-            agentLabel.className = 'label-overlay';
-            agentLabel.style.borderColor = '#ff8888';
-            agentLabel.style.color = '#ff8888';
-            labelContainer.appendChild(agentLabel);
-            
-            // Lights
-            const ambientLight = new THREE.AmbientLight(0x404060);
-            scene.add(ambientLight);
-            
-            const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
-            sunLight.position.set(10, 20, 5);
-            sunLight.castShadow = true;
-            scene.add(sunLight);
-            
-            const fillLight = new THREE.PointLight(0x4466cc, 0.4);
-            fillLight.position.set(0, 5, 0);
-            scene.add(fillLight);
-            
-            // Ground
-            const gridHelper = new THREE.GridHelper(45, 20, 0x88aaff, 0x335588);
-            gridHelper.position.y = -0.5;
-            scene.add(gridHelper);
-            
-            // Arena bounds
-            const boundsMat = new THREE.LineBasicMaterial({ color: 0x88aaff });
-            const size = 18;
-            const points = [
-                new THREE.Vector3(-size, -0.5, -size), new THREE.Vector3(size, -0.5, -size),
-                new THREE.Vector3(size, -0.5, size), new THREE.Vector3(-size, -0.5, size),
-                new THREE.Vector3(-size, -0.5, -size)
-            ];
-            const boundsGeo = new THREE.BufferGeometry().setFromPoints(points);
-            const boundsLine = new THREE.Line(boundsGeo, boundsMat);
-            scene.add(boundsLine);
-            
-            // ============================================
-            // THE HILL
-            // ============================================
-            
-            const hillGroup = new THREE.Group();
-            const hillBase = new THREE.Mesh(
-                new THREE.CylinderGeometry(2.5, 2.8, 0.3, 32),
-                new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200, metalness: 0.7 })
-            );
-            hillBase.castShadow = true;
-            hillGroup.add(hillBase);
-            
-            const hillRing = new THREE.Mesh(
-                new THREE.TorusGeometry(2.3, 0.1, 32, 64),
-                new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0xff6600 })
-            );
-            hillRing.rotation.x = Math.PI / 2;
-            hillRing.position.y = 0.2;
-            hillGroup.add(hillRing);
-            
-            const hillBeacon = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8),
-                new THREE.MeshStandardMaterial({ color: 0xff8844, emissive: 0xff4400 })
-            );
-            hillBeacon.position.y = 0.6;
-            hillGroup.add(hillBeacon);
-            
-            scene.add(hillGroup);
-            
-            const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
-            scene.add(hillLight);
-            
-            // ============================================
-            // HUMAN PLAYER (BLUE)
-            // ============================================
-            
-            const humanGroup = new THREE.Group();
-            
-            const humanBody = new THREE.Mesh(
-                new THREE.BoxGeometry(0.8, 0.8, 0.8),
-                new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.7 })
-            );
-            humanBody.castShadow = true;
-            humanGroup.add(humanBody);
-            
-            const humanHead = new THREE.Mesh(
-                new THREE.SphereGeometry(0.5, 32, 32),
-                new THREE.MeshStandardMaterial({ color: 0x88ccff })
-            );
-            humanHead.position.y = 0.7;
-            humanGroup.add(humanHead);
-            
-            const humanEye = new THREE.Mesh(
-                new THREE.SphereGeometry(0.12, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff })
-            );
-            humanEye.position.set(0.25, 0.85, 0.45);
-            humanGroup.add(humanEye);
-            
-            const humanEye2 = new THREE.Mesh(
-                new THREE.SphereGeometry(0.12, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff })
-            );
-            humanEye2.position.set(-0.25, 0.85, 0.45);
-            humanGroup.add(humanEye2);
-            
-            scene.add(humanGroup);
-            
-            // ============================================
-            // AI AGENT (RED)
-            // ============================================
-            
-            const agentGroup = new THREE.Group();
-            
-            const agentBody = new THREE.Mesh(
-                new THREE.BoxGeometry(0.8, 0.8, 0.8),
-                new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.7 })
-            );
-            agentBody.castShadow = true;
-            agentGroup.add(agentBody);
-            
-            const agentHead = new THREE.Mesh(
-                new THREE.SphereGeometry(0.5, 32, 32),
-                new THREE.MeshStandardMaterial({ color: 0xff8888 })
-            );
-            agentHead.position.y = 0.7;
-            agentGroup.add(agentHead);
-            
-            const agentEye = new THREE.Mesh(
-                new THREE.SphereGeometry(0.12, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 })
-            );
-            agentEye.position.set(0.25, 0.85, 0.45);
-            agentGroup.add(agentEye);
-            
-            const agentEye2 = new THREE.Mesh(
-                new THREE.SphereGeometry(0.12, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 })
-            );
-            agentEye2.position.set(-0.25, 0.85, 0.45);
-            agentGroup.add(agentEye2);
-            
-            const antennaMat = new THREE.MeshStandardMaterial({ color: 0xff6666, emissive: 0xff2200 });
-            const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 6), antennaMat);
-            antenna.position.y = 1.0;
-            agentGroup.add(antenna);
-            
-            scene.add(agentGroup);
-            
-            // ============================================
-            // TRAIL EFFECTS
-            // ============================================
-            
-            let humanTrail = [];
-            let agentTrail = [];
-            
-            const humanTrailMat = new THREE.PointsMaterial({ color: 0x44aaff, size: 0.1 });
-            const agentTrailMat = new THREE.PointsMaterial({ color: 0xff4444, size: 0.1 });
-            
-            let humanTrailPoints = new THREE.Points(new THREE.BufferGeometry(), humanTrailMat);
-            let agentTrailPoints = new THREE.Points(new THREE.BufferGeometry(), agentTrailMat);
-            scene.add(humanTrailPoints);
-            scene.add(agentTrailPoints);
-            
-            // ============================================
-            // GAME STATE
-            // ============================================
-            
-            const arenaBounds = 17;
-            const hillRadius = 2.5;
-            const HUMAN_SPEED = 7.5;
-            const AGENT_SPEED = 7.2;
-            const COLLISION_RADIUS = 0.9;
-            
-            let humanPos = { x: -5, z: -3 };
-            let agentPos = { x: 5, z: 3 };
-            let hillPos = { x: 0, z: 0 };
-            
-            let humanScore = 0;
-            let agentScore = 0;
-            let humanInZone = false;
-            let agentInZone = false;
-            
-            let gameActive = false;
-            let gameTime = 60.0;
-            let moveTimer = 8.0;
-            let currentInterval = 80;
-            let stepsSinceLastMove = 0;
-            let goalChanges = 0;
-            
-            let lastAIDecisionTime = 0;
-            let currentAIAction = 4;
-            
-            const keyState = {
-                w: false, s: false, a: false, d: false,
-                ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false
-            };
-            
-            // ============================================
-            // TENSORFLOW.JS DQN AGENT
-            // ============================================
-            
-            class SimpleDQNAgent {
-                constructor() {
-                    this.epsilon = 0.3;
-                    this.trainingEpisodes = 0;
-                    this.memory = [];
-                    this.memorySize = 3000;
-                    
-                    // Build neural network
-                    this.model = tf.sequential();
-                    this.model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [6] }));
-                    this.model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
-                    this.model.add(tf.layers.dense({ units: 5, activation: 'linear' }));
-                    this.model.compile({ optimizer: 'adam', loss: 'mse' });
-                    
-                    console.log('AI Agent initialized');
+            function init() {
+                console.log('TensorFlow.js version:', tf.version.tfjs);
+                
+                // ============================================
+                // THREE.JS SETUP
+                // ============================================
+                
+                const container = document.getElementById('canvas-container');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a1030);
+                scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
+                
+                const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+                camera.position.set(0, 28, 0);
+                camera.lookAt(0, 0, 0);
+                
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(width, height);
+                renderer.shadowMap.enabled = true;
+                container.appendChild(renderer.domElement);
+                
+                // HTML labels
+                const labelContainer = document.createElement('div');
+                labelContainer.style.position = 'absolute';
+                labelContainer.style.top = '0';
+                labelContainer.style.left = '0';
+                labelContainer.style.width = '100%';
+                labelContainer.style.height = '100%';
+                labelContainer.style.pointerEvents = 'none';
+                labelContainer.style.zIndex = '100';
+                container.appendChild(labelContainer);
+                
+                function makeLabel(text, color) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    div.className = 'label-overlay';
+                    div.style.borderColor = color;
+                    div.style.color = color;
+                    labelContainer.appendChild(div);
+                    return div;
                 }
                 
-                getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone) {
-                    return [
-                        agentPos.x / 18, agentPos.z / 18,
-                        hillPos.x / 18, hillPos.z / 18,
-                        Math.min(1, stepsSinceLastMove / currentInterval),
-                        inZone ? 1 : 0
-                    ];
+                const hillLabel = makeLabel('🏆 HILL', '#ffaa44');
+                const humanLabel = makeLabel('🧑 YOU', '#44aaff');
+                const agentLabel = makeLabel('🤖 AI', '#ff8888');
+                
+                function updateLabelPosition(label, x, z) {
+                    const vec = new THREE.Vector3(x, 1.5, z);
+                    vec.project(camera);
+                    const screenX = (vec.x * 0.5 + 0.5) * width;
+                    const screenY = (-vec.y * 0.5 + 0.5) * height;
+                    label.style.left = screenX + 'px';
+                    label.style.top = (screenY - 25) + 'px';
                 }
                 
-                async getAction(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone, humanInZone) {
-                    const obs = this.getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone);
-                    const input = tf.tensor2d([obs], [1, 6]);
-                    const qValues = this.model.predict(input);
-                    const values = await qValues.data();
-                    input.dispose();
-                    qValues.dispose();
-                    
-                    if (Math.random() < this.epsilon) {
-                        return Math.floor(Math.random() * 5);
-                    }
-                    return values.indexOf(Math.max(...values));
-                }
+                // Lights
+                const ambientLight = new THREE.AmbientLight(0x404060);
+                scene.add(ambientLight);
                 
-                async trainStep(observation, action, reward, nextObservation, done) {
-                    this.memory.push({ observation, action, reward, nextObservation, done });
-                    if (this.memory.length > this.memorySize) this.memory.shift();
-                    
-                    if (this.memory.length < 32) return;
-                    
-                    // Sample random batch
-                    const batch = [];
-                    const indices = new Set();
-                    while (indices.size < 32) {
-                        indices.add(Math.floor(Math.random() * this.memory.length));
-                    }
-                    for (const idx of indices) batch.push(this.memory[idx]);
-                    
-                    const currentStates = batch.map(e => e.observation);
-                    const nextStates = batch.map(e => e.nextObservation);
-                    
-                    const currentQTensor = this.model.predict(tf.tensor2d(currentStates, [32, 6]));
-                    const currentQValues = await currentQTensor.array();
-                    const nextQTensor = this.model.predict(tf.tensor2d(nextStates, [32, 6]));
-                    const nextQValues = await nextQTensor.array();
-                    
-                    const targetQValues = [];
-                    for (let i = 0; i < 32; i++) {
-                        const targetQ = [...currentQValues[i]];
-                        const actionTaken = batch[i].action;
-                        const rewardVal = batch[i].reward;
-                        const doneFlag = batch[i].done;
-                        
-                        if (doneFlag) {
-                            targetQ[actionTaken] = rewardVal;
-                        } else {
-                            const maxNextQ = Math.max(...nextQValues[i]);
-                            targetQ[actionTaken] = rewardVal + 0.95 * maxNextQ;
-                        }
-                        targetQValues.push(targetQ);
-                    }
-                    
-                    const xs = tf.tensor2d(currentStates, [32, 6]);
-                    const ys = tf.tensor2d(targetQValues, [32, 5]);
-                    await this.model.fit(xs, ys, { epochs: 1, verbose: 0 });
-                    
-                    xs.dispose();
-                    ys.dispose();
-                    currentQTensor.dispose();
-                    nextQTensor.dispose();
-                    
-                    this.epsilon = Math.max(0.05, this.epsilon * 0.995);
-                }
+                const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+                sunLight.position.set(10, 20, 5);
+                sunLight.castShadow = true;
+                scene.add(sunLight);
                 
-                updateUI() {
-                    document.getElementById('epsilon').textContent = this.epsilon.toFixed(3);
-                    document.getElementById('train-episodes').textContent = this.trainingEpisodes;
-                    document.getElementById('memory').textContent = this.memory.length;
-                }
-            }
-            
-            const aiAgent = new SimpleDQNAgent();
-            
-            // ============================================
-            // HELPER FUNCTIONS
-            // ============================================
-            
-            function getRandomPosition() {
-                const margin = 3;
-                return {
-                    x: (Math.random() - 0.5) * (arenaBounds - margin) * 2,
-                    z: (Math.random() - 0.5) * (arenaBounds - margin) * 2
-                };
-            }
-            
-            function getDistance(pos1, pos2) {
-                return Math.hypot(pos1.x - pos2.x, pos1.z - pos2.z);
-            }
-            
-            function worldToScreen(x, z) {
-                // Project 3D world coordinates to 2D screen coordinates
-                const vector = new THREE.Vector3(x, 1.5, z);
-                vector.project(camera);
-                const screenX = (vector.x * 0.5 + 0.5) * width;
-                const screenY = (-vector.y * 0.5 + 0.5) * height;
-                return { x: screenX, y: screenY };
-            }
-            
-            function updateLabels() {
-                // Update hill label
-                const hillScreen = worldToScreen(hillPos.x, hillPos.z);
-                updateLabelPosition(hillLabel, hillScreen.x, hillScreen.y - 30);
+                const fillLight = new THREE.PointLight(0x4466cc, 0.4);
+                fillLight.position.set(0, 5, 0);
+                scene.add(fillLight);
                 
-                // Update human label
-                const humanScreen = worldToScreen(humanPos.x, humanPos.z);
-                updateLabelPosition(humanLabel, humanScreen.x, humanScreen.y - 30);
+                // Ground
+                const gridHelper = new THREE.GridHelper(45, 20, 0x88aaff, 0x335588);
+                gridHelper.position.y = -0.5;
+                scene.add(gridHelper);
                 
-                // Update agent label
-                const agentScreen = worldToScreen(agentPos.x, agentPos.z);
-                updateLabelPosition(agentLabel, agentScreen.x, agentScreen.y - 30);
-            }
-            
-            function updateUI() {
-                document.getElementById('human-score').textContent = Math.floor(humanScore);
-                document.getElementById('agent-score').textContent = Math.floor(agentScore);
-                document.getElementById('timer').textContent = gameTime.toFixed(1);
-                document.getElementById('move-timer').textContent = moveTimer.toFixed(1);
-                document.getElementById('interval').textContent = currentInterval;
-                document.getElementById('goal-changes').textContent = goalChanges;
-                document.getElementById('game-progress').style.width = `${(gameTime / 60) * 100}%`;
-                aiAgent.updateUI();
+                // Arena bounds
+                const boundsMat = new THREE.LineBasicMaterial({ color: 0x88aaff });
+                const arenaSize = 18;
+                const boundsPoints = [
+                    new THREE.Vector3(-arenaSize, -0.5, -arenaSize), new THREE.Vector3(arenaSize, -0.5, -arenaSize),
+                    new THREE.Vector3(arenaSize, -0.5, arenaSize), new THREE.Vector3(-arenaSize, -0.5, arenaSize),
+                    new THREE.Vector3(-arenaSize, -0.5, -arenaSize)
+                ];
+                const boundsGeo = new THREE.BufferGeometry().setFromPoints(boundsPoints);
+                const boundsLine = new THREE.Line(boundsGeo, boundsMat);
+                scene.add(boundsLine);
                 
-                if (humanInZone) {
-                    document.getElementById('human-status').innerHTML = '✅ IN ZONE!';
-                    document.getElementById('human-status').className = 'in-zone';
-                } else {
-                    document.getElementById('human-status').innerHTML = '❌ Not in zone';
-                    document.getElementById('human-status').className = '';
-                }
+                // ============================================
+                // THE HILL
+                // ============================================
                 
-                if (agentInZone) {
-                    document.getElementById('agent-status').innerHTML = '✅ IN ZONE!';
-                    document.getElementById('agent-status').className = 'in-zone';
-                } else {
-                    document.getElementById('agent-status').innerHTML = '❌ Not in zone';
-                    document.getElementById('agent-status').className = '';
-                }
-            }
-            
-            function handleCollisions() {
-                const dist = getDistance(humanPos, agentPos);
-                if (dist < COLLISION_RADIUS * 2) {
-                    const angle = Math.atan2(agentPos.z - humanPos.z, agentPos.x - humanPos.x);
-                    const pushX = Math.cos(angle) * 0.5;
-                    const pushZ = Math.sin(angle) * 0.5;
-                    
-                    humanPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.x - pushX));
-                    humanPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.z - pushZ));
-                    agentPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.x + pushX));
-                    agentPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.z + pushZ));
-                }
-            }
-            
-            // ============================================
-            // TRAINING MODE
-            // ============================================
-            
-            let isTraining = false;
-            
-            async function trainAI(episodes = 30) {
-                if (isTraining) {
-                    console.log('Training already in progress...');
-                    return;
-                }
+                const hillGroup = new THREE.Group();
+                const hillBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(2.5, 2.8, 0.3, 32),
+                    new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200, metalness: 0.7 })
+                );
+                hillBase.castShadow = true;
+                hillGroup.add(hillBase);
                 
-                isTraining = true;
-                const gameStatusEl = document.getElementById('game-status');
-                const trainStatusEl = document.getElementById('train-status');
-                gameStatusEl.textContent = "TRAINING AI";
-                gameStatusEl.className = 'status-training';
-                trainStatusEl.innerHTML = 'Training in progress... please wait';
-                console.log('Starting AI Training (30 episodes)...');
+                const hillRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(2.3, 0.1, 32, 64),
+                    new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0xff6600 })
+                );
+                hillRing.rotation.x = Math.PI / 2;
+                hillRing.position.y = 0.2;
+                hillGroup.add(hillRing);
                 
-                for (let ep = 0; ep < episodes; ep++) {
-                    let tAgentPos = { x: (Math.random() - 0.5) * (arenaBounds - 6) * 2, z: (Math.random() - 0.5) * (arenaBounds - 6) * 2 };
-                    let tHillPos = getRandomPosition();
-                    let tStepsSinceLastMove = 0;
-                    let tCurrentInterval = 80;
-                    let tMoveTimer = 8.0;
-                    let tEpisodeReward = 0;
-                    
-                    for (let step = 0; step < 300; step++) {
-                        tStepsSinceLastMove++;
-                        
-                        const obs = aiAgent.getObservation(tAgentPos, tHillPos, tStepsSinceLastMove, tCurrentInterval, false);
-                        let action;
-                        if (Math.random() < aiAgent.epsilon) {
-                            action = Math.floor(Math.random() * 5);
-                        } else {
-                            const input = tf.tensor2d([obs], [1, 6]);
-                            const qValues = aiAgent.model.predict(input);
-                            const values = await qValues.data();
-                            action = values.indexOf(Math.max(...values));
-                            input.dispose();
-                            qValues.dispose();
-                        }
-                        
-                        const moves = { 0: { x: 0, z: 1 }, 1: { x: 0, z: -1 }, 2: { x: -1, z: 0 }, 3: { x: 1, z: 0 }, 4: { x: 0, z: 0 } };
-                        const move = moves[action];
-                        
-                        let newX = tAgentPos.x + move.x * AGENT_SPEED * 0.1;
-                        let newZ = tAgentPos.z + move.z * AGENT_SPEED * 0.1;
-                        newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
-                        newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-                        tAgentPos = { x: newX, z: newZ };
-                        
-                        const dist = getDistance(tAgentPos, tHillPos);
-                        const inZone = dist < hillRadius;
-                        let reward = inZone ? 1.0 : -0.01;
-                        tEpisodeReward += reward;
-                        
-                        tMoveTimer -= 0.1;
-                        if (tMoveTimer <= 0) {
-                            tHillPos = getRandomPosition();
-                            tMoveTimer = 8.0;
-                            tStepsSinceLastMove = 0;
-                            if (Math.random() < 0.3) {
-                                tCurrentInterval = Math.floor(40 + Math.random() * 120);
-                            }
-                        }
-                        
-                        const nextObs = aiAgent.getObservation(tAgentPos, tHillPos, tStepsSinceLastMove, tCurrentInterval, inZone);
-                        await aiAgent.trainStep(obs, action, reward, nextObs, false);
-                    }
-                    
-                    aiAgent.trainingEpisodes++;
-                    aiAgent.updateUI();
-                    
-                    const progress = ((ep + 1) / episodes) * 100;
-                    document.getElementById('train-progress').style.width = `${progress}%`;
-                    trainStatusEl.innerHTML = `Training episode ${ep + 1}/${episodes} | Reward: ${tEpisodeReward.toFixed(1)}`;
-                    
-                    await new Promise(r => setTimeout(r, 30));
-                }
+                const hillBeacon = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8),
+                    new THREE.MeshStandardMaterial({ color: 0xff8844, emissive: 0xff4400 })
+                );
+                hillBeacon.position.y = 0.6;
+                hillGroup.add(hillBeacon);
                 
-                isTraining = false;
-                gameStatusEl.textContent = "Ready";
-                gameStatusEl.className = 'status-idle';
-                trainStatusEl.innerHTML = 'Training complete! AI is now smarter! Play a game!';
-                console.log(`Training complete! Final epsilon: ${aiAgent.epsilon.toFixed(3)}`);
-            }
-            
-            // ============================================
-            // MOVEMENT FUNCTIONS
-            // ============================================
-            
-            function updateHumanMovement(deltaTime) {
-                let moveX = 0, moveZ = 0;
-                if (keyState.w || keyState.ArrowUp) moveZ -= 1;
-                if (keyState.s || keyState.ArrowDown) moveZ += 1;
-                if (keyState.a || keyState.ArrowLeft) moveX -= 1;
-                if (keyState.d || keyState.ArrowRight) moveX += 1;
+                scene.add(hillGroup);
+                const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
+                scene.add(hillLight);
                 
-                if (moveX !== 0 || moveZ !== 0) {
-                    const len = Math.hypot(moveX, moveZ);
-                    moveX /= len;
-                    moveZ /= len;
-                }
+                // ============================================
+                // HUMAN PLAYER (BLUE)
+                // ============================================
                 
-                let newX = humanPos.x + moveX * HUMAN_SPEED * deltaTime;
-                let newZ = humanPos.z + moveZ * HUMAN_SPEED * deltaTime;
-                newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
-                newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-                humanPos = { x: newX, z: newZ };
+                const humanGroup = new THREE.Group();
+                const humanBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.7 }));
+                humanBody.castShadow = true;
+                humanGroup.add(humanBody);
                 
-                humanGroup.position.set(humanPos.x, 0, humanPos.z);
+                const humanHead = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x88ccff }));
+                humanHead.position.y = 0.7;
+                humanGroup.add(humanHead);
                 
-                if (moveX !== 0 || moveZ !== 0) {
-                    humanGroup.rotation.y = Math.atan2(moveX, moveZ);
-                }
-                humanGroup.position.y = Math.sin(Date.now() * 0.01) * 0.03;
-            }
-            
-            let lastDecisionTime = 0;
-            
-            async function updateAgentMovement(deltaTime, currentTime) {
-                if (currentTime - lastDecisionTime >= 0.15 && !isTraining) {
-                    lastDecisionTime = currentTime;
-                    currentAIAction = await aiAgent.getAction(
-                        agentPos, hillPos, stepsSinceLastMove, currentInterval, 
-                        agentInZone, humanInZone
-                    );
-                }
+                const humanEye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff }));
+                humanEye.position.set(0.25, 0.85, 0.45);
+                humanGroup.add(humanEye);
                 
-                const moves = { 0: { x: 0, z: 1 }, 1: { x: 0, z: -1 }, 2: { x: -1, z: 0 }, 3: { x: 1, z: 0 }, 4: { x: 0, z: 0 } };
-                const move = moves[currentAIAction];
+                const humanEye2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff }));
+                humanEye2.position.set(-0.25, 0.85, 0.45);
+                humanGroup.add(humanEye2);
                 
-                let newX = agentPos.x + move.x * AGENT_SPEED * deltaTime;
-                let newZ = agentPos.z + move.z * AGENT_SPEED * deltaTime;
-                newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
-                newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-                agentPos = { x: newX, z: newZ };
+                scene.add(humanGroup);
                 
-                agentGroup.position.set(agentPos.x, 0, agentPos.z);
+                // ============================================
+                // AI AGENT (RED)
+                // ============================================
                 
-                if (move.x !== 0 || move.z !== 0) {
-                    agentGroup.rotation.y = Math.atan2(move.x, move.z);
-                }
-                agentGroup.position.y = Math.sin(Date.now() * 0.012) * 0.03;
-            }
-            
-            function updateGame(deltaTime) {
-                if (!gameActive || isTraining) return;
+                const agentGroup = new THREE.Group();
+                const agentBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.7 }));
+                agentBody.castShadow = true;
+                agentGroup.add(agentBody);
                 
-                gameTime -= deltaTime;
-                if (gameTime <= 0) {
-                    gameActive = false;
-                    document.getElementById('game-status').textContent = "GAME OVER";
-                    document.getElementById('game-status').className = 'status-idle';
-                    console.log(`GAME OVER! You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
-                    return;
-                }
+                const agentHead = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff8888 }));
+                agentHead.position.y = 0.7;
+                agentGroup.add(agentHead);
                 
-                moveTimer -= deltaTime;
-                stepsSinceLastMove++;
+                const agentEye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 }));
+                agentEye.position.set(0.25, 0.85, 0.45);
+                agentGroup.add(agentEye);
                 
-                if (moveTimer <= 0) {
-                    hillPos = getRandomPosition();
-                    hillGroup.position.set(hillPos.x, 0, hillPos.z);
-                    hillLight.position.set(hillPos.x, 1.5, hillPos.z);
-                    moveTimer = 8.0;
-                    stepsSinceLastMove = 0;
-                    goalChanges++;
-                    
-                    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true });
-                    const flashSphere = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), flashMat);
-                    flashSphere.position.set(hillPos.x, 0.5, hillPos.z);
-                    scene.add(flashSphere);
-                    setTimeout(() => scene.remove(flashSphere), 200);
-                    
-                    if (Math.random() < 0.3) {
-                        const oldInterval = currentInterval;
-                        currentInterval = Math.max(40, Math.min(160, currentInterval * (Math.random() < 0.5 ? 0.8 : 1.2)));
-                        console.log(`Interval: ${oldInterval} → ${currentInterval}`);
-                    }
-                }
+                const agentEye2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 }));
+                agentEye2.position.set(-0.25, 0.85, 0.45);
+                agentGroup.add(agentEye2);
                 
-                handleCollisions();
+                const antennaMat = new THREE.MeshStandardMaterial({ color: 0xff6666, emissive: 0xff2200 });
+                const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 6), antennaMat);
+                antenna.position.y = 1.0;
+                agentGroup.add(antenna);
                 
-                const humanDist = getDistance(humanPos, hillPos);
-                const agentDist = getDistance(agentPos, hillPos);
+                scene.add(agentGroup);
                 
-                humanInZone = humanDist < hillRadius;
-                agentInZone = agentDist < hillRadius;
+                // ============================================
+                // TRAILS
+                // ============================================
                 
-                if (humanInZone) humanScore += deltaTime;
-                if (agentInZone) agentScore += deltaTime;
-                
-                let intensity = 0.5;
-                if (humanInZone && agentInZone) intensity = 1.3;
-                else if (humanInZone || agentInZone) intensity = 1.0;
-                hillLight.intensity = intensity;
-                hillBeacon.material.emissiveIntensity = intensity * 0.6;
-                
-                updateUI();
-                
-                // Update trails
-                humanTrail.unshift({ x: humanPos.x, z: humanPos.z });
-                agentTrail.unshift({ x: agentPos.x, z: agentPos.z });
-                if (humanTrail.length > 30) humanTrail.pop();
-                if (agentTrail.length > 30) agentTrail.pop();
-                
-                const humanVertices = [];
-                const agentVertices = [];
-                for (const pos of humanTrail) humanVertices.push(pos.x, 0.1, pos.z);
-                for (const pos of agentTrail) agentVertices.push(pos.x, 0.1, pos.z);
-                
-                const humanTrailGeo = new THREE.BufferGeometry();
-                humanTrailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(humanVertices), 3));
-                scene.remove(humanTrailPoints);
-                humanTrailPoints = new THREE.Points(humanTrailGeo, humanTrailMat);
+                let humanTrail = [], agentTrail = [];
+                const trailMat = new THREE.PointsMaterial({ color: 0x44aaff, size: 0.1 });
+                const agentTrailMat = new THREE.PointsMaterial({ color: 0xff4444, size: 0.1 });
+                let humanTrailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
+                let agentTrailPoints = new THREE.Points(new THREE.BufferGeometry(), agentTrailMat);
                 scene.add(humanTrailPoints);
-                
-                const agentTrailGeo = new THREE.BufferGeometry();
-                agentTrailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(agentVertices), 3));
-                scene.remove(agentTrailPoints);
-                agentTrailPoints = new THREE.Points(agentTrailGeo, agentTrailMat);
                 scene.add(agentTrailPoints);
                 
-                // Update HTML labels
-                updateLabels();
+                // ============================================
+                // GAME STATE
+                // ============================================
+                
+                const bounds = 17;
+                const hillR = 2.5;
+                const HUMAN_SPEED = 7.5;
+                const AGENT_SPEED = 7.2;
+                
+                let humanPos = { x: -5, z: -3 };
+                let agentPos = { x: 5, z: 3 };
+                let hillPos = { x: 0, z: 0 };
+                
+                let humanScore = 0, agentScore = 0;
+                let humanInZone = false, agentInZone = false;
+                let gameActive = false;
+                let gameTime = 60.0;
+                let moveTimer = 8.0;
+                let currentInterval = 80;
+                let stepsSinceLastMove = 0;
+                let goalChanges = 0;
+                
+                let lastDecisionTime = 0;
+                let currentAction = 4;
+                
+                const keys = { w: false, s: false, a: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+                
+                // ============================================
+                // TENSORFLOW.JS AGENT - FIXED LOSS FUNCTION
+                // ============================================
+                
+                class DQNAgent {
+                    constructor() {
+                        this.epsilon = 0.3;
+                        this.episodes = 0;
+                        this.memory = [];
+                        this.memorySize = 3000;
+                        
+                        // Build neural network - using correct loss function name
+                        this.model = tf.sequential();
+                        this.model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [6] }));
+                        this.model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+                        this.model.add(tf.layers.dense({ units: 5, activation: 'linear' }));
+                        
+                        // FIX: Use 'meanSquaredError' instead of 'mse'
+                        this.model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+                        
+                        console.log('AI Agent created with meanSquaredError loss');
+                    }
+                    
+                    getObs(pos, hill, steps, interval, inZone) {
+                        return [
+                            pos.x / 18, pos.z / 18,
+                            hill.x / 18, hill.z / 18,
+                            Math.min(1, steps / interval),
+                            inZone ? 1 : 0
+                        ];
+                    }
+                    
+                    async getAction(pos, hill, steps, interval, inZone) {
+                        const obs = this.getObs(pos, hill, steps, interval, inZone);
+                        const input = tf.tensor2d([obs], [1, 6]);
+                        const qValues = this.model.predict(input);
+                        const values = await qValues.data();
+                        input.dispose();
+                        qValues.dispose();
+                        
+                        if (Math.random() < this.epsilon) {
+                            return Math.floor(Math.random() * 5);
+                        }
+                        return values.indexOf(Math.max(...values));
+                    }
+                    
+                    async train(obs, action, reward, nextObs, done) {
+                        this.memory.push({ obs, action, reward, nextObs, done });
+                        if (this.memory.length > this.memorySize) this.memory.shift();
+                        if (this.memory.length < 32) return;
+                        
+                        // Sample batch
+                        const batch = [];
+                        const indices = new Set();
+                        while (indices.size < 32) {
+                            indices.add(Math.floor(Math.random() * this.memory.length));
+                        }
+                        for (const idx of indices) batch.push(this.memory[idx]);
+                        
+                        const states = batch.map(e => e.obs);
+                        const nextStates = batch.map(e => e.nextObs);
+                        
+                        const currentQTensor = this.model.predict(tf.tensor2d(states, [32, 6]));
+                        const currentQ = await currentQTensor.array();
+                        const nextQTensor = this.model.predict(tf.tensor2d(nextStates, [32, 6]));
+                        const nextQ = await nextQTensor.array();
+                        
+                        const targets = [];
+                        for (let i = 0; i < 32; i++) {
+                            const target = [...currentQ[i]];
+                            const a = batch[i].action;
+                            const r = batch[i].reward;
+                            const d = batch[i].done;
+                            
+                            if (d) {
+                                target[a] = r;
+                            } else {
+                                target[a] = r + 0.95 * Math.max(...nextQ[i]);
+                            }
+                            targets.push(target);
+                        }
+                        
+                        const xs = tf.tensor2d(states, [32, 6]);
+                        const ys = tf.tensor2d(targets, [32, 5]);
+                        await this.model.fit(xs, ys, { epochs: 1, verbose: 0 });
+                        
+                        xs.dispose(); ys.dispose();
+                        currentQTensor.dispose(); nextQTensor.dispose();
+                        
+                        this.epsilon = Math.max(0.05, this.epsilon * 0.995);
+                    }
+                    
+                    updateUI() {
+                        document.getElementById('epsilon').textContent = this.epsilon.toFixed(3);
+                        document.getElementById('train-episodes').textContent = this.episodes;
+                    }
+                }
+                
+                const agent = new DQNAgent();
+                
+                // ============================================
+                // HELPERS
+                // ============================================
+                
+                function randomPos() {
+                    const margin = 3;
+                    return {
+                        x: (Math.random() - 0.5) * (bounds - margin) * 2,
+                        z: (Math.random() - 0.5) * (bounds - margin) * 2
+                    };
+                }
+                
+                function distance(a, b) {
+                    return Math.hypot(a.x - b.x, a.z - b.z);
+                }
+                
+                function updateUI() {
+                    document.getElementById('human-score').textContent = Math.floor(humanScore);
+                    document.getElementById('agent-score').textContent = Math.floor(agentScore);
+                    document.getElementById('timer').textContent = gameTime.toFixed(1);
+                    document.getElementById('move-timer').textContent = moveTimer.toFixed(1);
+                    document.getElementById('interval').textContent = currentInterval;
+                    document.getElementById('goal-changes').textContent = goalChanges;
+                    document.getElementById('game-progress').style.width = `${(gameTime / 60) * 100}%`;
+                    agent.updateUI();
+                    
+                    if (humanInZone) {
+                        document.getElementById('human-status').innerHTML = '✅ IN ZONE!';
+                        document.getElementById('human-status').className = 'in-zone';
+                    } else {
+                        document.getElementById('human-status').innerHTML = '❌ Not in zone';
+                        document.getElementById('human-status').className = '';
+                    }
+                    
+                    if (agentInZone) {
+                        document.getElementById('agent-status').innerHTML = '✅ IN ZONE!';
+                        document.getElementById('agent-status').className = 'in-zone';
+                    } else {
+                        document.getElementById('agent-status').innerHTML = '❌ Not in zone';
+                        document.getElementById('agent-status').className = '';
+                    }
+                }
+                
+                function handleCollision() {
+                    const dist = distance(humanPos, agentPos);
+                    if (dist < 1.6) {
+                        const angle = Math.atan2(agentPos.z - humanPos.z, agentPos.x - humanPos.x);
+                        const pushX = Math.cos(angle) * 0.5;
+                        const pushZ = Math.sin(angle) * 0.5;
+                        humanPos.x = Math.max(-bounds, Math.min(bounds, humanPos.x - pushX));
+                        humanPos.z = Math.max(-bounds, Math.min(bounds, humanPos.z - pushZ));
+                        agentPos.x = Math.max(-bounds, Math.min(bounds, agentPos.x + pushX));
+                        agentPos.z = Math.max(-bounds, Math.min(bounds, agentPos.z + pushZ));
+                    }
+                }
+                
+                // ============================================
+                // TRAINING
+                // ============================================
+                
+                let training = false;
+                
+                async function trainAI(episodes = 20) {
+                    if (training) return;
+                    training = true;
+                    
+                    const statusEl = document.getElementById('game-status');
+                    const trainStatusEl = document.getElementById('train-status');
+                    statusEl.textContent = "TRAINING AI";
+                    statusEl.className = 'status-training';
+                    trainStatusEl.innerHTML = 'Training in progress...';
+                    console.log('Starting training for', episodes, 'episodes');
+                    
+                    for (let ep = 0; ep < episodes; ep++) {
+                        let tAgent = randomPos();
+                        let tHill = randomPos();
+                        let tSteps = 0;
+                        let tInterval = 80;
+                        let tTimer = 8.0;
+                        let epReward = 0;
+                        
+                        for (let step = 0; step < 300; step++) {
+                            tSteps++;
+                            
+                            const obs = agent.getObs(tAgent, tHill, tSteps, tInterval, false);
+                            let action;
+                            if (Math.random() < agent.epsilon) {
+                                action = Math.floor(Math.random() * 5);
+                            } else {
+                                const input = tf.tensor2d([obs], [1, 6]);
+                                const q = agent.model.predict(input);
+                                const vals = await q.data();
+                                action = vals.indexOf(Math.max(...vals));
+                                input.dispose();
+                                q.dispose();
+                            }
+                            
+                            const moves = { 0: { x: 0, z: 1 }, 1: { x: 0, z: -1 }, 2: { x: -1, z: 0 }, 3: { x: 1, z: 0 }, 4: { x: 0, z: 0 } };
+                            const move = moves[action];
+                            
+                            tAgent.x = Math.max(-bounds, Math.min(bounds, tAgent.x + move.x * AGENT_SPEED * 0.1));
+                            tAgent.z = Math.max(-bounds, Math.min(bounds, tAgent.z + move.z * AGENT_SPEED * 0.1));
+                            
+                            const dist = distance(tAgent, tHill);
+                            const inZone = dist < hillR;
+                            const reward = inZone ? 1.0 : -0.01;
+                            epReward += reward;
+                            
+                            tTimer -= 0.1;
+                            if (tTimer <= 0) {
+                                tHill = randomPos();
+                                tTimer = 8.0;
+                                tSteps = 0;
+                                if (Math.random() < 0.3) {
+                                    tInterval = Math.max(40, Math.min(160, tInterval * (Math.random() < 0.5 ? 0.8 : 1.2)));
+                                }
+                            }
+                            
+                            const nextObs = agent.getObs(tAgent, tHill, tSteps, tInterval, inZone);
+                            await agent.train(obs, action, reward, nextObs, false);
+                        }
+                        
+                        agent.episodes++;
+                        agent.updateUI();
+                        
+                        const progress = ((ep + 1) / episodes) * 100;
+                        document.getElementById('train-progress').style.width = `${progress}%`;
+                        trainStatusEl.innerHTML = `Episode ${ep + 1}/${episodes} | Reward: ${epReward.toFixed(1)}`;
+                        
+                        await new Promise(r => setTimeout(r, 20));
+                    }
+                    
+                    training = false;
+                    statusEl.textContent = "Ready";
+                    statusEl.className = 'status-idle';
+                    trainStatusEl.innerHTML = 'Training complete! AI is ready!';
+                    console.log('Training complete! Final epsilon:', agent.epsilon);
+                }
+                
+                // ============================================
+                // MOVEMENT
+                // ============================================
+                
+                function updateHuman(delta) {
+                    let mx = 0, mz = 0;
+                    if (keys.w || keys.ArrowUp) mz -= 1;
+                    if (keys.s || keys.ArrowDown) mz += 1;
+                    if (keys.a || keys.ArrowLeft) mx -= 1;
+                    if (keys.d || keys.ArrowRight) mx += 1;
+                    
+                    if (mx !== 0 || mz !== 0) {
+                        const len = Math.hypot(mx, mz);
+                        mx /= len;
+                        mz /= len;
+                    }
+                    
+                    let nx = humanPos.x + mx * HUMAN_SPEED * delta;
+                    let nz = humanPos.z + mz * HUMAN_SPEED * delta;
+                    humanPos = { x: Math.max(-bounds, Math.min(bounds, nx)), z: Math.max(-bounds, Math.min(bounds, nz)) };
+                    humanGroup.position.set(humanPos.x, 0, humanPos.z);
+                    
+                    if (mx !== 0 || mz !== 0) humanGroup.rotation.y = Math.atan2(mx, mz);
+                    humanGroup.position.y = Math.sin(Date.now() * 0.01) * 0.03;
+                }
+                
+                let lastDecision = 0;
+                
+                async function updateAgent(delta, now) {
+                    if (now - lastDecision >= 0.15 && !training) {
+                        lastDecision = now;
+                        currentAction = await agent.getAction(agentPos, hillPos, stepsSinceLastMove, currentInterval, agentInZone);
+                    }
+                    
+                    const moves = { 0: { x: 0, z: 1 }, 1: { x: 0, z: -1 }, 2: { x: -1, z: 0 }, 3: { x: 1, z: 0 }, 4: { x: 0, z: 0 } };
+                    const move = moves[currentAction];
+                    
+                    let nx = agentPos.x + move.x * AGENT_SPEED * delta;
+                    let nz = agentPos.z + move.z * AGENT_SPEED * delta;
+                    agentPos = { x: Math.max(-bounds, Math.min(bounds, nx)), z: Math.max(-bounds, Math.min(bounds, nz)) };
+                    agentGroup.position.set(agentPos.x, 0, agentPos.z);
+                    
+                    if (move.x !== 0 || move.z !== 0) agentGroup.rotation.y = Math.atan2(move.x, move.z);
+                    agentGroup.position.y = Math.sin(Date.now() * 0.012) * 0.03;
+                }
+                
+                function updateGame(delta) {
+                    if (!gameActive || training) return;
+                    
+                    gameTime -= delta;
+                    if (gameTime <= 0) {
+                        gameActive = false;
+                        document.getElementById('game-status').textContent = "GAME OVER";
+                        document.getElementById('game-status').className = 'status-idle';
+                        console.log(`GAME OVER! You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
+                        return;
+                    }
+                    
+                    moveTimer -= delta;
+                    stepsSinceLastMove++;
+                    
+                    if (moveTimer <= 0) {
+                        hillPos = randomPos();
+                        hillGroup.position.set(hillPos.x, 0, hillPos.z);
+                        hillLight.position.set(hillPos.x, 1.5, hillPos.z);
+                        moveTimer = 8.0;
+                        stepsSinceLastMove = 0;
+                        goalChanges++;
+                        
+                        const flash = new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true });
+                        const sphere = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), flash);
+                        sphere.position.set(hillPos.x, 0.5, hillPos.z);
+                        scene.add(sphere);
+                        setTimeout(() => scene.remove(sphere), 200);
+                        
+                        if (Math.random() < 0.3) {
+                            const old = currentInterval;
+                            currentInterval = Math.max(40, Math.min(160, currentInterval * (Math.random() < 0.5 ? 0.8 : 1.2)));
+                            console.log(`Interval: ${old} → ${currentInterval}`);
+                        }
+                    }
+                    
+                    handleCollision();
+                    
+                    const hDist = distance(humanPos, hillPos);
+                    const aDist = distance(agentPos, hillPos);
+                    
+                    humanInZone = hDist < hillR;
+                    agentInZone = aDist < hillR;
+                    
+                    if (humanInZone) humanScore += delta;
+                    if (agentInZone) agentScore += delta;
+                    
+                    let intensity = 0.5;
+                    if (humanInZone && agentInZone) intensity = 1.3;
+                    else if (humanInZone || agentInZone) intensity = 1.0;
+                    hillLight.intensity = intensity;
+                    hillBeacon.material.emissiveIntensity = intensity * 0.6;
+                    
+                    updateUI();
+                    
+                    // Update trails
+                    humanTrail.unshift({ x: humanPos.x, z: humanPos.z });
+                    agentTrail.unshift({ x: agentPos.x, z: agentPos.z });
+                    if (humanTrail.length > 30) humanTrail.pop();
+                    if (agentTrail.length > 30) agentTrail.pop();
+                    
+                    const hv = [], av = [];
+                    for (const p of humanTrail) hv.push(p.x, 0.1, p.z);
+                    for (const p of agentTrail) av.push(p.x, 0.1, p.z);
+                    
+                    const hGeo = new THREE.BufferGeometry();
+                    hGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(hv), 3));
+                    scene.remove(humanTrailPoints);
+                    humanTrailPoints = new THREE.Points(hGeo, trailMat);
+                    scene.add(humanTrailPoints);
+                    
+                    const aGeo = new THREE.BufferGeometry();
+                    aGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(av), 3));
+                    scene.remove(agentTrailPoints);
+                    agentTrailPoints = new THREE.Points(aGeo, agentTrailMat);
+                    scene.add(agentTrailPoints);
+                    
+                    // Update HTML labels
+                    updateLabelPosition(hillLabel, hillPos.x, hillPos.z);
+                    updateLabelPosition(humanLabel, humanPos.x, humanPos.z);
+                    updateLabelPosition(agentLabel, agentPos.x, agentPos.z);
+                }
+                
+                // ============================================
+                // CONTROLS
+                // ============================================
+                
+                window.addEventListener('keydown', (e) => {
+                    if (keys.hasOwnProperty(e.key)) {
+                        keys[e.key] = true;
+                        e.preventDefault();
+                    }
+                });
+                
+                window.addEventListener('keyup', (e) => {
+                    if (keys.hasOwnProperty(e.key)) {
+                        keys[e.key] = false;
+                        e.preventDefault();
+                    }
+                });
+                
+                document.getElementById('btn-start').onclick = () => {
+                    if (training) { alert('Wait for training to finish!'); return; }
+                    gameActive = true;
+                    gameTime = 60;
+                    humanScore = 0;
+                    agentScore = 0;
+                    humanPos = { x: -5, z: -3 };
+                    agentPos = { x: 5, z: 3 };
+                    hillPos = { x: 0, z: 0 };
+                    moveTimer = 8;
+                    stepsSinceLastMove = 0;
+                    currentInterval = 80;
+                    goalChanges = 0;
+                    humanTrail = [];
+                    agentTrail = [];
+                    
+                    humanGroup.position.set(humanPos.x, 0, humanPos.z);
+                    agentGroup.position.set(agentPos.x, 0, agentPos.z);
+                    hillGroup.position.set(hillPos.x, 0, hillPos.z);
+                    hillLight.position.set(hillPos.x, 1.5, hillPos.z);
+                    
+                    document.getElementById('game-status').textContent = "PLAYING";
+                    document.getElementById('game-status').className = 'status-playing';
+                    console.log('GAME STARTED! Use WASD to move. Stand on the GOLD HILL!');
+                };
+                
+                document.getElementById('btn-train').onclick = async () => {
+                    await trainAI(20);
+                };
+                
+                document.getElementById('btn-reset').onclick = () => {
+                    gameActive = false;
+                    gameTime = 60;
+                    humanScore = 0;
+                    agentScore = 0;
+                    humanPos = { x: -5, z: -3 };
+                    agentPos = { x: 5, z: 3 };
+                    hillPos = { x: 0, z: 0 };
+                    humanTrail = [];
+                    agentTrail = [];
+                    
+                    humanGroup.position.set(humanPos.x, 0, humanPos.z);
+                    agentGroup.position.set(agentPos.x, 0, agentPos.z);
+                    hillGroup.position.set(hillPos.x, 0, hillPos.z);
+                    hillLight.position.set(hillPos.x, 1.5, hillPos.z);
+                    
+                    document.getElementById('game-status').textContent = "Ready";
+                    document.getElementById('game-status').className = 'status-idle';
+                    console.log('Game reset.');
+                };
+                
+                // ============================================
+                // ANIMATION
+                // ============================================
+                
+                let lastTime = performance.now() / 1000;
+                
+                function animate() {
+                    const now = performance.now() / 1000;
+                    let delta = Math.min(0.033, now - lastTime);
+                    if (delta < 0.01) delta = 0.016;
+                    lastTime = now;
+                    
+                    if (gameActive && !training) {
+                        updateHuman(delta);
+                        updateAgent(delta, now);
+                        updateGame(delta);
+                    }
+                    
+                    hillRing.rotation.z += delta * 3;
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(animate);
+                }
+                
+                animate();
+                
+                window.addEventListener('resize', () => {
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                });
+                
+                console.log('================================================');
+                console.log('READY! Follow these steps:');
+                console.log('1. Click "Train AI (20 episodes)" - takes ~10 seconds');
+                console.log('2. Wait for training to complete');
+                console.log('3. Click "Start Game" to play against the AI');
+                console.log('4. Use WASD or Arrow keys to move the BLUE robot');
+                console.log('================================================');
             }
-            
-            // ============================================
-            // KEYBOARD CONTROLS
-            // ============================================
-            
-            window.addEventListener('keydown', (e) => {
-                if (keyState.hasOwnProperty(e.key)) {
-                    keyState[e.key] = true;
-                    e.preventDefault();
-                }
-            });
-            
-            window.addEventListener('keyup', (e) => {
-                if (keyState.hasOwnProperty(e.key)) {
-                    keyState[e.key] = false;
-                    e.preventDefault();
-                }
-            });
-            
-            // ============================================
-            // BUTTON HANDLERS
-            // ============================================
-            
-            document.getElementById('btn-start').onclick = () => {
-                if (isTraining) {
-                    alert('Please wait for training to complete first!');
-                    return;
-                }
-                gameActive = true;
-                gameTime = 60.0;
-                humanScore = 0;
-                agentScore = 0;
-                humanPos = { x: -5, z: -3 };
-                agentPos = { x: 5, z: 3 };
-                hillPos = { x: 0, z: 0 };
-                moveTimer = 8.0;
-                stepsSinceLastMove = 0;
-                currentInterval = 80;
-                goalChanges = 0;
-                humanTrail = [];
-                agentTrail = [];
-                
-                humanGroup.position.set(humanPos.x, 0, humanPos.z);
-                agentGroup.position.set(agentPos.x, 0, agentPos.z);
-                hillGroup.position.set(hillPos.x, 0, hillPos.z);
-                hillLight.position.set(hillPos.x, 1.5, hillPos.z);
-                
-                document.getElementById('game-status').textContent = "PLAYING";
-                document.getElementById('game-status').className = 'status-playing';
-                console.log('GAME STARTED! Use WASD to move. Stand on GOLD HILL to score!');
-            };
-            
-            document.getElementById('btn-train').onclick = async () => {
-                await trainAI(30);
-            };
-            
-            document.getElementById('btn-reset').onclick = () => {
-                gameActive = false;
-                gameTime = 60.0;
-                humanScore = 0;
-                agentScore = 0;
-                humanPos = { x: -5, z: -3 };
-                agentPos = { x: 5, z: 3 };
-                hillPos = { x: 0, z: 0 };
-                humanTrail = [];
-                agentTrail = [];
-                
-                humanGroup.position.set(humanPos.x, 0, humanPos.z);
-                agentGroup.position.set(agentPos.x, 0, agentPos.z);
-                hillGroup.position.set(hillPos.x, 0, hillPos.z);
-                hillLight.position.set(hillPos.x, 1.5, hillPos.z);
-                
-                document.getElementById('game-status').textContent = "Ready";
-                document.getElementById('game-status').className = 'status-idle';
-                console.log('Game reset. Train AI first or click START GAME!');
-            };
-            
-            // ============================================
-            // ANIMATION LOOP
-            // ============================================
-            
-            let lastFrameTime = performance.now() / 1000;
-            
-            function animate() {
-                const now = performance.now() / 1000;
-                let delta = Math.min(0.033, now - lastFrameTime);
-                if (delta < 0.01) delta = 0.016;
-                lastFrameTime = now;
-                
-                if (gameActive && !isTraining) {
-                    updateHumanMovement(delta);
-                    updateAgentMovement(delta, now);
-                    updateGame(delta);
-                }
-                
-                hillRing.rotation.z += delta * 3;
-                
-                renderer.render(scene, camera);
-                requestAnimationFrame(animate);
-            }
-            
-            animate();
-            
-            // Update camera aspect on resize
-            window.addEventListener('resize', () => {
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                camera.aspect = w / h;
-                camera.updateProjectionMatrix();
-                renderer.setSize(w, h);
-            });
-            
-            console.log('================================================');
-            console.log('READY TO PLAY!');
-            console.log('1. Click "Train AI" first (30 episodes)');
-            console.log('2. Wait ~15 seconds for training');
-            console.log('3. Click "Start Game" to play against the AI');
-            console.log('4. Use WASD or Arrow keys to move BLUE robot');
-            console.log('================================================');
-        };
+        })();
     </script>
 </body>
 </html>
