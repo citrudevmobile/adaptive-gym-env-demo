@@ -29,6 +29,23 @@
             background: #0a1030;
         }
         
+        /* HTML overlay for labels - simple and works everywhere */
+        .label-overlay {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 5px black;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 10px;
+            border-radius: 20px;
+            border: 1px solid;
+        }
+        
         .sidebar {
             flex: 1;
             background: rgba(0, 0, 0, 0.85);
@@ -201,11 +218,6 @@
             background: #ffaa44;
             border-radius: 4px;
         }
-        
-        #status-text {
-            font-size: 14px;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -230,7 +242,7 @@
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                     <button class="button" id="btn-start">▶ Start Game (60s)</button>
-                    <button class="button" id="btn-train">🧠 Train AI (50 episodes)</button>
+                    <button class="button" id="btn-train">🧠 Train AI (30 episodes)</button>
                     <button class="button button-secondary" id="btn-reset">🔄 Reset</button>
                 </div>
             </div>
@@ -274,10 +286,6 @@
                     <span class="metric-value" id="epsilon">0.30</span>
                 </div>
                 <div class="metric-row">
-                    <span class="metric-label">Network Loss:</span>
-                    <span class="metric-value" id="loss">0.0000</span>
-                </div>
-                <div class="metric-row">
                     <span class="metric-label">Memory Size:</span>
                     <span class="metric-value" id="memory">0</span>
                 </div>
@@ -310,7 +318,7 @@
                 <p><kbd>A</kbd> / <kbd>←</kbd> - Move LEFT</p>
                 <p><kbd>D</kbd> / <kbd>→</kbd> - Move RIGHT</p>
                 <p style="margin-top: 10px; color: #ffaa44;">🏆 Stand on GOLDEN HILL to score!</p>
-                <p style="color: #88aaff;">🤖 Train AI first (50 episodes) - takes about 30 seconds!</p>
+                <p style="color: #88aaff;">🤖 Train AI first (30 episodes) - takes about 15 seconds!</p>
             </div>
         </div>
     </div>
@@ -319,24 +327,25 @@
         🎮 <strong>CAMERA shows ALL:</strong> You (Blue) + AI (Red) + Hill (Gold)<br>
         🟡 <strong>Stand on GOLD HILL</strong> to earn points!<br>
         🚫 <strong>Collision Detection:</strong> Players bounce off each other<br>
-        🧠 <strong>Train AI first (50 episodes)</strong> - watch progress bar!
+        🧠 <strong>Train AI first (30 episodes)</strong> - then play!
     </div>
 
-    <!-- Load all scripts from CDN - NO MODULES, just global scripts -->
+    <!-- Load all scripts from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     
     <script>
-        // Wait for TensorFlow and Three.js to load
+        // Wait for everything to load
         window.onload = function() {
+            
+            console.log('Starting game...');
+            console.log('TensorFlow.js version:', tf.version.tfjs);
             
             // ============================================
             // THREE.JS VISUALIZATION SETUP
             // ============================================
             
             const container = document.getElementById('canvas-container');
-            
-            // Get container dimensions
             const width = container.clientWidth;
             const height = container.clientHeight;
             
@@ -344,7 +353,7 @@
             scene.background = new THREE.Color(0x0a1030);
             scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
             
-            // Fixed camera: Top-down view that shows EVERYTHING
+            // Fixed camera: Top-down view showing everything
             const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
             camera.position.set(0, 28, 0);
             camera.lookAt(0, 0, 0);
@@ -353,6 +362,44 @@
             renderer.setSize(width, height);
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
+            
+            // Create HTML overlay for labels (no CSS2DRenderer needed!)
+            const labelContainer = document.createElement('div');
+            labelContainer.style.position = 'absolute';
+            labelContainer.style.top = '0';
+            labelContainer.style.left = '0';
+            labelContainer.style.width = '100%';
+            labelContainer.style.height = '100%';
+            labelContainer.style.pointerEvents = 'none';
+            labelContainer.style.zIndex = '100';
+            container.appendChild(labelContainer);
+            
+            function updateLabelPosition(label, x, y) {
+                label.style.left = `${x}px`;
+                label.style.top = `${y}px`;
+            }
+            
+            // Create labels
+            const hillLabel = document.createElement('div');
+            hillLabel.textContent = '🏆 HILL 🏆';
+            hillLabel.className = 'label-overlay';
+            hillLabel.style.borderColor = '#ffaa44';
+            hillLabel.style.color = '#ffaa44';
+            labelContainer.appendChild(hillLabel);
+            
+            const humanLabel = document.createElement('div');
+            humanLabel.textContent = '🧑 YOU';
+            humanLabel.className = 'label-overlay';
+            humanLabel.style.borderColor = '#44aaff';
+            humanLabel.style.color = '#44aaff';
+            labelContainer.appendChild(humanLabel);
+            
+            const agentLabel = document.createElement('div');
+            agentLabel.textContent = '🤖 AI';
+            agentLabel.className = 'label-overlay';
+            agentLabel.style.borderColor = '#ff8888';
+            agentLabel.style.color = '#ff8888';
+            labelContainer.appendChild(agentLabel);
             
             // Lights
             const ambientLight = new THREE.AmbientLight(0x404060);
@@ -385,7 +432,7 @@
             scene.add(boundsLine);
             
             // ============================================
-            // THE HILL (GOAL)
+            // THE HILL
             // ============================================
             
             const hillGroup = new THREE.Group();
@@ -415,37 +462,6 @@
             
             const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
             scene.add(hillLight);
-            
-            // Simple text labels using HTML divs (no CSS2DRenderer issues)
-            function createLabel(text, color) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                div.style.color = color;
-                div.style.fontSize = '14px';
-                div.style.fontWeight = 'bold';
-                div.style.textShadow = '0 0 5px black';
-                div.style.background = 'rgba(0,0,0,0.6)';
-                div.style.padding = '2px 8px';
-                div.style.borderRadius = '12px';
-                div.style.border = `1px solid ${color}`;
-                div.style.whiteSpace = 'nowrap';
-                div.style.fontFamily = 'monospace';
-                return div;
-            }
-            
-            const hillLabelDiv = createLabel('🏆 HILL', '#ffaa44');
-            const hillLabel = new THREE.CSS2DObject(hillLabelDiv);
-            hillLabel.position.y = 2.0;
-            hillGroup.add(hillLabel);
-            
-            // Need CSS2DRenderer for labels
-            const labelRenderer = new THREE.CSS2DRenderer();
-            labelRenderer.setSize(width, height);
-            labelRenderer.domElement.style.position = 'absolute';
-            labelRenderer.domElement.style.top = '0px';
-            labelRenderer.domElement.style.left = '0px';
-            labelRenderer.domElement.style.pointerEvents = 'none';
-            container.appendChild(labelRenderer.domElement);
             
             // ============================================
             // HUMAN PLAYER (BLUE)
@@ -482,11 +498,6 @@
             humanGroup.add(humanEye2);
             
             scene.add(humanGroup);
-            
-            const humanLabelDiv = createLabel('🧑 YOU', '#44aaff');
-            const humanLabel = new THREE.CSS2DObject(humanLabelDiv);
-            humanLabel.position.y = 1.2;
-            humanGroup.add(humanLabel);
             
             // ============================================
             // AI AGENT (RED)
@@ -528,11 +539,6 @@
             agentGroup.add(antenna);
             
             scene.add(agentGroup);
-            
-            const agentLabelDiv = createLabel('🤖 AI', '#ff8888');
-            const agentLabel = new THREE.CSS2DObject(agentLabelDiv);
-            agentLabel.position.y = 1.2;
-            agentGroup.add(agentLabel);
             
             // ============================================
             // TRAIL EFFECTS
@@ -591,45 +597,40 @@
                 constructor() {
                     this.epsilon = 0.3;
                     this.trainingEpisodes = 0;
-                    this.isTraining = false;
+                    this.memory = [];
+                    this.memorySize = 3000;
                     
-                    // Build a simple neural network
+                    // Build neural network
                     this.model = tf.sequential();
                     this.model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [6] }));
                     this.model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
                     this.model.add(tf.layers.dense({ units: 5, activation: 'linear' }));
-                    
                     this.model.compile({ optimizer: 'adam', loss: 'mse' });
-                    
-                    this.memory = [];
-                    this.memorySize = 5000;
                     
                     console.log('AI Agent initialized');
                 }
                 
                 getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone) {
-                    const normX = agentPos.x / 18;
-                    const normZ = agentPos.z / 18;
-                    const hillNormX = hillPos.x / 18;
-                    const hillNormZ = hillPos.z / 18;
-                    const timeNorm = Math.min(1, stepsSinceLastMove / currentInterval);
-                    const inZoneFlag = inZone ? 1 : 0;
-                    return [normX, normZ, hillNormX, hillNormZ, timeNorm, inZoneFlag];
+                    return [
+                        agentPos.x / 18, agentPos.z / 18,
+                        hillPos.x / 18, hillPos.z / 18,
+                        Math.min(1, stepsSinceLastMove / currentInterval),
+                        inZone ? 1 : 0
+                    ];
                 }
                 
                 async getAction(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone, humanInZone) {
                     const obs = this.getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone);
-                    const inputTensor = tf.tensor2d([obs], [1, 6]);
-                    const qValues = this.model.predict(inputTensor);
+                    const input = tf.tensor2d([obs], [1, 6]);
+                    const qValues = this.model.predict(input);
                     const values = await qValues.data();
-                    inputTensor.dispose();
+                    input.dispose();
                     qValues.dispose();
                     
                     if (Math.random() < this.epsilon) {
                         return Math.floor(Math.random() * 5);
-                    } else {
-                        return values.indexOf(Math.max(...values));
                     }
+                    return values.indexOf(Math.max(...values));
                 }
                 
                 async trainStep(observation, action, reward, nextObservation, done) {
@@ -638,6 +639,7 @@
                     
                     if (this.memory.length < 32) return;
                     
+                    // Sample random batch
                     const batch = [];
                     const indices = new Set();
                     while (indices.size < 32) {
@@ -671,7 +673,6 @@
                     
                     const xs = tf.tensor2d(currentStates, [32, 6]);
                     const ys = tf.tensor2d(targetQValues, [32, 5]);
-                    
                     await this.model.fit(xs, ys, { epochs: 1, verbose: 0 });
                     
                     xs.dispose();
@@ -682,7 +683,7 @@
                     this.epsilon = Math.max(0.05, this.epsilon * 0.995);
                 }
                 
-                updateMetrics() {
+                updateUI() {
                     document.getElementById('epsilon').textContent = this.epsilon.toFixed(3);
                     document.getElementById('train-episodes').textContent = this.trainingEpisodes;
                     document.getElementById('memory').textContent = this.memory.length;
@@ -707,6 +708,29 @@
                 return Math.hypot(pos1.x - pos2.x, pos1.z - pos2.z);
             }
             
+            function worldToScreen(x, z) {
+                // Project 3D world coordinates to 2D screen coordinates
+                const vector = new THREE.Vector3(x, 1.5, z);
+                vector.project(camera);
+                const screenX = (vector.x * 0.5 + 0.5) * width;
+                const screenY = (-vector.y * 0.5 + 0.5) * height;
+                return { x: screenX, y: screenY };
+            }
+            
+            function updateLabels() {
+                // Update hill label
+                const hillScreen = worldToScreen(hillPos.x, hillPos.z);
+                updateLabelPosition(hillLabel, hillScreen.x, hillScreen.y - 30);
+                
+                // Update human label
+                const humanScreen = worldToScreen(humanPos.x, humanPos.z);
+                updateLabelPosition(humanLabel, humanScreen.x, humanScreen.y - 30);
+                
+                // Update agent label
+                const agentScreen = worldToScreen(agentPos.x, agentPos.z);
+                updateLabelPosition(agentLabel, agentScreen.x, agentScreen.y - 30);
+            }
+            
             function updateUI() {
                 document.getElementById('human-score').textContent = Math.floor(humanScore);
                 document.getElementById('agent-score').textContent = Math.floor(agentScore);
@@ -715,7 +739,7 @@
                 document.getElementById('interval').textContent = currentInterval;
                 document.getElementById('goal-changes').textContent = goalChanges;
                 document.getElementById('game-progress').style.width = `${(gameTime / 60) * 100}%`;
-                aiAgent.updateMetrics();
+                aiAgent.updateUI();
                 
                 if (humanInZone) {
                     document.getElementById('human-status').innerHTML = '✅ IN ZONE!';
@@ -735,31 +759,26 @@
             }
             
             function handleCollisions() {
-                const dist = Math.hypot(humanPos.x - agentPos.x, humanPos.z - agentPos.z);
+                const dist = getDistance(humanPos, agentPos);
                 if (dist < COLLISION_RADIUS * 2) {
                     const angle = Math.atan2(agentPos.z - humanPos.z, agentPos.x - humanPos.x);
                     const pushX = Math.cos(angle) * 0.5;
                     const pushZ = Math.sin(angle) * 0.5;
                     
-                    humanPos.x -= pushX;
-                    humanPos.z -= pushZ;
-                    agentPos.x += pushX;
-                    agentPos.z += pushZ;
-                    
-                    humanPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.x));
-                    humanPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.z));
-                    agentPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.x));
-                    agentPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.z));
+                    humanPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.x - pushX));
+                    humanPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.z - pushZ));
+                    agentPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.x + pushX));
+                    agentPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.z + pushZ));
                 }
             }
             
             // ============================================
-            // TRAINING MODE - With frame delays to prevent freezing
+            // TRAINING MODE
             // ============================================
             
             let isTraining = false;
             
-            async function trainAI(episodes = 50) {
+            async function trainAI(episodes = 30) {
                 if (isTraining) {
                     console.log('Training already in progress...');
                     return;
@@ -771,7 +790,7 @@
                 gameStatusEl.textContent = "TRAINING AI";
                 gameStatusEl.className = 'status-training';
                 trainStatusEl.innerHTML = 'Training in progress... please wait';
-                console.log('Starting AI Training (50 episodes)...');
+                console.log('Starting AI Training (30 episodes)...');
                 
                 for (let ep = 0; ep < episodes; ep++) {
                     let tAgentPos = { x: (Math.random() - 0.5) * (arenaBounds - 6) * 2, z: (Math.random() - 0.5) * (arenaBounds - 6) * 2 };
@@ -789,11 +808,11 @@
                         if (Math.random() < aiAgent.epsilon) {
                             action = Math.floor(Math.random() * 5);
                         } else {
-                            const inputTensor = tf.tensor2d([obs], [1, 6]);
-                            const qValues = aiAgent.model.predict(inputTensor);
+                            const input = tf.tensor2d([obs], [1, 6]);
+                            const qValues = aiAgent.model.predict(input);
                             const values = await qValues.data();
                             action = values.indexOf(Math.max(...values));
-                            inputTensor.dispose();
+                            input.dispose();
                             qValues.dispose();
                         }
                         
@@ -806,7 +825,7 @@
                         newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
                         tAgentPos = { x: newX, z: newZ };
                         
-                        const dist = Math.hypot(tAgentPos.x - tHillPos.x, tAgentPos.z - tHillPos.z);
+                        const dist = getDistance(tAgentPos, tHillPos);
                         const inZone = dist < hillRadius;
                         let reward = inZone ? 1.0 : -0.01;
                         tEpisodeReward += reward;
@@ -826,20 +845,19 @@
                     }
                     
                     aiAgent.trainingEpisodes++;
-                    aiAgent.updateMetrics();
+                    aiAgent.updateUI();
                     
                     const progress = ((ep + 1) / episodes) * 100;
                     document.getElementById('train-progress').style.width = `${progress}%`;
                     trainStatusEl.innerHTML = `Training episode ${ep + 1}/${episodes} | Reward: ${tEpisodeReward.toFixed(1)}`;
                     
-                    // Let the browser breathe between episodes
-                    await new Promise(r => setTimeout(r, 50));
+                    await new Promise(r => setTimeout(r, 30));
                 }
                 
                 isTraining = false;
                 gameStatusEl.textContent = "Ready";
                 gameStatusEl.className = 'status-idle';
-                trainStatusEl.innerHTML = 'Training complete! AI is now smarter!';
+                trainStatusEl.innerHTML = 'Training complete! AI is now smarter! Play a game!';
                 console.log(`Training complete! Final epsilon: ${aiAgent.epsilon.toFixed(3)}`);
             }
             
@@ -979,6 +997,9 @@
                 scene.remove(agentTrailPoints);
                 agentTrailPoints = new THREE.Points(agentTrailGeo, agentTrailMat);
                 scene.add(agentTrailPoints);
+                
+                // Update HTML labels
+                updateLabels();
             }
             
             // ============================================
@@ -1029,11 +1050,11 @@
                 
                 document.getElementById('game-status').textContent = "PLAYING";
                 document.getElementById('game-status').className = 'status-playing';
-                console.log('GAME STARTED! Use WASD to move BLUE robot. Stand on GOLD HILL to score!');
+                console.log('GAME STARTED! Use WASD to move. Stand on GOLD HILL to score!');
             };
             
             document.getElementById('btn-train').onclick = async () => {
-                await trainAI(50);
+                await trainAI(30);
             };
             
             document.getElementById('btn-reset').onclick = () => {
@@ -1078,27 +1099,26 @@
                 hillRing.rotation.z += delta * 3;
                 
                 renderer.render(scene, camera);
-                labelRenderer.render(scene, camera);
                 requestAnimationFrame(animate);
             }
             
             animate();
             
+            // Update camera aspect on resize
             window.addEventListener('resize', () => {
                 const w = container.clientWidth;
                 const h = container.clientHeight;
                 camera.aspect = w / h;
                 camera.updateProjectionMatrix();
                 renderer.setSize(w, h);
-                labelRenderer.setSize(w, h);
             });
             
             console.log('================================================');
-            console.log('TWO PLAYER - TensorFlow.js DQN');
-            console.log('YOU: Blue robot | Control with WASD or Arrow Keys');
-            console.log('AI: Red robot | Neural Network DQN (6→64→64→5)');
-            console.log('Click "Train AI" first (50 episodes) - takes ~30 seconds');
-            console.log('Then click "Start Game" to play!');
+            console.log('READY TO PLAY!');
+            console.log('1. Click "Train AI" first (30 episodes)');
+            console.log('2. Wait ~15 seconds for training');
+            console.log('3. Click "Start Game" to play against the AI');
+            console.log('4. Use WASD or Arrow keys to move BLUE robot');
             console.log('================================================');
         };
     </script>
