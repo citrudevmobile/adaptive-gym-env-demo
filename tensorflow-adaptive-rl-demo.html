@@ -1,1 +1,577 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TensorFlow.js Adaptive RL - King of the Hill DQN Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Monaco', 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+            color: #0f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #ffaa44;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+        
+        h2 {
+            color: #88aaff;
+            margin: 20px 0 10px 0;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #ffaa44;
+            padding-bottom: 5px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header p {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        
+        .card {
+            background: rgba(10, 10, 26, 0.9);
+            border: 1px solid #ffaa44;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .card-title {
+            color: #ffaa44;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title .badge {
+            background: #ffaa44;
+            color: #0a0a1a;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .metric {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        
+        .metric-label {
+            color: #aaa;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-value {
+            color: #ffaa44;
+            font-size: 1.4rem;
+            font-weight: bold;
+            word-break: break-all;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #ffaa44, #ff6600);
+            color: #0a0a1a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: monospace;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: scale(1.02);
+            background: linear-gradient(135deg, #ffcc66, #ff8844);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: white;
+        }
+        
+        .btn-reset {
+            background: linear-gradient(135deg, #444, #222);
+            color: white;
+        }
+        
+        .status-training {
+            color: #ffaa44;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-idle {
+            color: #44ff44;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa44, #ff6600);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+        
+        .console {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            height: 200px;
+            overflow-y: scroll;
+            border: 1px solid #ffaa44;
+        }
+        
+        .console-line {
+            color: #0f0;
+            margin: 2px 0;
+            border-left: 2px solid #ffaa44;
+            padding-left: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            font-size: 0.7rem;
+            color: #666;
+        }
+        
+        .inline-code {
+            background: #1a1a2e;
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: #ffaa44;
+            font-family: monospace;
+        }
+        
+        hr {
+            border-color: #333;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> TensorFlow.js Adaptive Reinforcement Learning</h1>
+            <p>Deep Q-Network (DQN) | King of the Hill | Dynamic Goal Repositioning</p>
+            <p style="font-size: 0.8rem; margin-top: 5px;">Pure browser - no Node.js, no servers, no installation</p>
+        </div>
+        
+        <!-- Control Card -->
+        <div class="card">
+            <div class="card-title">
+                 Control Panel
+                <span class="badge">Active</span>
+            </div>
+            <div class="button-group">
+                <button id="btn-train"> Start Training</button>
+                <button id="btn-stop" class="btn-stop"> Stop Training</button>
+                <button id="btn-reset" class="btn-reset"> Reset Session</button>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div style="margin-top: 10px;">
+                Status: <span id="status" class="status-idle">IDLE</span>
+            </div>
+        </div>
+        
+        <!-- Performance Metrics Card -->
+        <div class="card">
+            <div class="card-title">
+                 Performance Metrics
+                <span class="badge">Real-time</span>
+            </div>
+            <div class="metric-grid">
+                <div class="metric">
+                    <div class="metric-label">Episode</div>
+                    <div class="metric-value" id="episode">0</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Episode Reward</div>
+                    <div class="metric-value" id="reward">0</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Exploration (Epsilon)</div>
+                    <div class="metric-value" id="epsilon">0.300</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Network Loss</div>
+                    <div class="metric-value" id="loss">0.0000</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Memory Size</div>
+                    <div class="metric-value" id="memory">0</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Total Training Steps</div>
+                    <div class="metric-value" id="steps">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Environment Adaptation Card -->
+        <div class="card">
+            <div class="card-title">
+                 Environment Adaptation
+                <span class="badge">Dynamic</span>
+            </div>
+            <div class="metric-grid">
+                <div class="metric">
+                    <div class="metric-label">Current Move Interval</div>
+                    <div class="metric-value" id="interval">80</div>
+                    <div style="font-size: 0.7rem; color: #aaa;">steps between hill moves</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Total Goal Changes</div>
+                    <div class="metric-value" id="goal-changes">0</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Avg Adaptation Time</div>
+                    <div class="metric-value" id="adapt-time">--</div>
+                    <div style="font-size: 0.7rem; color: #aaa;">steps to find new hill</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Neural Network Architecture Card -->
+        <div class="card">
+            <div class="card-title">
+                 Neural Network Architecture
+                <span class="badge">Deep Q-Network</span>
+            </div>
+            <div class="metric-grid">
+                <div class="metric">
+                    <div class="metric-label">Input Layer</div>
+                    <div class="metric-value">6 neurons</div>
+                    <div style="font-size: 0.7rem;">agent x,z | goal x,z | time | inZone</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Hidden Layer 1</div>
+                    <div class="metric-value">64 neurons</div>
+                    <div style="font-size: 0.7rem;">ReLU activation</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Hidden Layer 2</div>
+                    <div class="metric-value">64 neurons</div>
+                    <div style="font-size: 0.7rem;">ReLU activation</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Output Layer</div>
+                    <div class="metric-value">5 neurons</div>
+                    <div style="font-size: 0.7rem;">Q-values for each action</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Console Output Card -->
+        <div class="card">
+            <div class="card-title">
+                 Training Console
+                <span class="badge">Logs</span>
+            </div>
+            <div class="console" id="console">
+                <div class="console-line">[System] TensorFlow.js Adaptive RL Module loaded</div>
+                <div class="console-line">[System] Click START TRAINING to begin</div>
+                <div class="console-line">[System] The agent will learn to chase the moving hill</div>
+            </div>
+        </div>
+        
+        <!-- Tutorial Card -->
+        <div class="card">
+            <div class="card-title">
+                 Tutorial: How This Works
+                <span class="badge">Learn</span>
+            </div>
+            
+            <h2>What is Adaptive Reinforcement Learning?</h2>
+            <p>Normal RL: The rules never change. The agent learns ONE strategy.</p>
+            <p>Adaptive RL: The rules CHANGE over time. The agent must KEEP LEARNING.</p>
+            <p>In this game, the hill moves every N steps, and N changes randomly between episodes!</p>
+            
+            <h2>What is a Deep Q-Network (DQN)?</h2>
+            <p>Instead of a big lookup table (Q-table), DQN uses a NEURAL NETWORK to predict Q-values.</p>
+            <p>Benefits: Handles continuous states, generalizes to new situations, scales to complex problems.</p>
+            
+            <h2>The Bellman Equation</h2>
+            <p><code class="inline-code">Q(s,a) = Q(s,a) + α * [ R + γ * max(Q(s',a')) - Q(s,a) ]</code></p>
+            <p>This is how the agent learns from rewards and updates its neural network.</p>
+            
+            <h2>Key DQN Features in This Code</h2>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Experience Replay:</strong> Stores past experiences, learns from random batches</li>
+                <li><strong>Target Network:</strong> Separate network for stable training targets</li>
+                <li><strong>Epsilon-Greedy:</strong> Balances exploration vs exploitation</li>
+                <li><strong>Adaptive Epsilon:</strong> Explores more when performing poorly</li>
+                <li><strong>Adaptive Environment:</strong> Hill move speed changes over time</li>
+            </ul>
+            
+            <h2>Reading the Metrics</h2>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Episode Reward:</strong> Total points in current game (higher = better)</li>
+                <li><strong>Epsilon:</strong> 0.3 = 30% random actions, 70% learned actions (decreases over time)</li>
+                <li><strong>Network Loss:</strong> How wrong the network is (lower = better)</li>
+                <li><strong>Avg Adaptation Time:</strong> How many steps to find hill after it moves (lower = better)</li>
+                <li><strong>Move Interval:</strong> How many steps until hill moves again (changes adaptively!)</li>
+            </ul>
+            
+            <h2>What to Watch For</h2>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li>Episode Reward should INCREASE over time (agent is learning)</li>
+                <li>Epsilon should DECREASE over time (agent explores less, exploits more)</li>
+                <li>Network Loss should DECREASE over time (predictions get better)</li>
+                <li>Adaptation Time should DECREASE (faster reaction to hill moves)</li>
+                <li>Move Interval changes randomly - watch the agent adapt!</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            TensorFlow.js Adaptive Reinforcement Learning Demo | Deep Q-Network | King of the Hill
+            <br>Pure browser JavaScript - No Node.js required
+        </div>
+    </div>
+
+    <!-- TensorFlow.js from CDN - PURE BROWSER, NO NODE.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    
+    <!-- Our Adaptive RL Module -->
+    <script src="tensorflow-adaptive-rl.js"></script>
+    
+    <script>
+        // Wait for everything to load
+        window.onload = async () => {
+            
+            // Check if TensorFlow is loaded
+            if (typeof tf === 'undefined') {
+                document.getElementById('console').innerHTML += '<div class="console-line">[ERROR] TensorFlow.js not loaded! Check internet connection.</div>';
+                return;
+            }
+            
+            if (typeof TensorFlowRL === 'undefined') {
+                document.getElementById('console').innerHTML += '<div class="console-line">[ERROR] Adaptive RL module not loaded! Check file path.</div>';
+                return;
+            }
+            
+            // Create environment with adaptive features
+            const env = new TensorFlowRL.Environment({
+                arenaSize: 20,
+                hillRadius: 2.5,
+                hillMoveInterval: 80,
+                adaptiveInterval: true,
+                adaptiveIntervalRange: { min: 40, max: 160 },
+                agentSpeed: 0.5
+            });
+            
+            // Create TensorFlow.js DQN agent
+            const agent = new TensorFlowRL.DQNAgent({
+                learningRate: 0.001,
+                discountFactor: 0.95,
+                epsilon: 0.3,
+                epsilonMin: 0.05,
+                epsilonDecay: 0.995,
+                memorySize: 10000,
+                batchSize: 32,
+                targetUpdateFreq: 100
+            });
+            
+            // Create trainer
+            const trainer = new TensorFlowRL.Trainer(env, agent);
+            
+            // UI Elements
+            const btnTrain = document.getElementById('btn-train');
+            const btnStop = document.getElementById('btn-stop');
+            const btnReset = document.getElementById('btn-reset');
+            const statusEl = document.getElementById('status');
+            const progressFill = document.getElementById('progress-fill');
+            const episodeEl = document.getElementById('episode');
+            const rewardEl = document.getElementById('reward');
+            const epsilonEl = document.getElementById('epsilon');
+            const lossEl = document.getElementById('loss');
+            const memoryEl = document.getElementById('memory');
+            const stepsEl = document.getElementById('steps');
+            const intervalEl = document.getElementById('interval');
+            const goalChangesEl = document.getElementById('goal-changes');
+            const adaptTimeEl = document.getElementById('adapt-time');
+            const consoleEl = document.getElementById('console');
+            
+            let trainingEpisodes = 0;
+            let bestReward = -Infinity;
+            
+            function logToConsole(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const color = type === 'error' ? '#ff4444' : (type === 'success' ? '#44ff44' : '#0f0');
+                consoleEl.innerHTML += `<div class="console-line" style="color: ${color};">[${timestamp}] ${message}</div>`;
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            }
+            
+            // Listen for training updates
+            trainer.onUpdate((data) => {
+                if (data.type === 'step') {
+                    episodeEl.textContent = data.episode;
+                    rewardEl.textContent = Math.floor(data.totalReward);
+                    
+                    if (data.agentMetrics) {
+                        epsilonEl.textContent = data.agentMetrics.epsilon;
+                        memoryEl.textContent = data.agentMetrics.memorySize;
+                        stepsEl.textContent = data.agentMetrics.totalSteps;
+                        lossEl.textContent = data.agentMetrics.lastLoss;
+                    }
+                    
+                    if (data.envMetrics) {
+                        intervalEl.textContent = data.envMetrics.currentInterval;
+                        goalChangesEl.textContent = data.envMetrics.totalGoalChanges;
+                        const adaptTime = data.envMetrics.averageAdaptationTime;
+                        adaptTimeEl.textContent = adaptTime ? adaptTime.toFixed(1) : '--';
+                    }
+                    
+                    if (data.goalMoved) {
+                        logToConsole(`Hill moved to new location! Current interval: ${data.envMetrics?.currentInterval} steps`);
+                    }
+                }
+                
+                if (data.type === 'episode_complete') {
+                    trainingEpisodes = data.episode;
+                    const reward = data.reward;
+                    
+                    if (reward > bestReward) {
+                        bestReward = reward;
+                        logToConsole(` New best reward! Episode ${data.episode}: ${reward.toFixed(1)} points`, 'success');
+                    } else {
+                        logToConsole(`Episode ${data.episode} complete. Reward: ${reward.toFixed(1)}. Epsilon: ${data.agentMetrics.epsilon}. Loss: ${data.agentMetrics.lastLoss}`);
+                    }
+                    
+                    const progress = (data.episode / 100) * 100;
+                    progressFill.style.width = `${Math.min(100, progress)}%`;
+                }
+            });
+            
+            // Button handlers
+            btnTrain.onclick = async () => {
+                if (trainer.trainingActive) {
+                    logToConsole('Training already in progress...');
+                    return;
+                }
+                
+                statusEl.textContent = 'TRAINING';
+                statusEl.className = 'status-training';
+                logToConsole('========================================');
+                logToConsole('STARTING TRAINING - 100 Episodes');
+                logToConsole('========================================');
+                logToConsole(`Neural Network: 6 inputs -> 64 -> 64 -> 5 outputs`);
+                logToConsole(`Learning Rate: 0.001 | Discount Factor: 0.95 | Initial Epsilon: 0.3`);
+                logToConsole('Watch the metrics below - Episode Reward should increase over time!');
+                
+                await trainer.train(100, 500);
+                
+                statusEl.textContent = 'COMPLETE';
+                logToConsole('========================================');
+                logToConsole(`TRAINING COMPLETE! Total episodes: ${trainingEpisodes}`);
+                logToConsole(`Best episode reward: ${bestReward.toFixed(1)}`);
+                logToConsole(`Final epsilon: ${agent.epsilon.toFixed(3)}`);
+                logToConsole('========================================', 'success');
+                
+                setTimeout(() => {
+                    statusEl.textContent = 'IDLE';
+                    statusEl.className = 'status-idle';
+                }, 2000);
+            };
+            
+            btnStop.onclick = () => {
+                trainer.stop();
+                statusEl.textContent = 'STOPPED';
+                logToConsole('Training stopped by user');
+                setTimeout(() => {
+                    statusEl.textContent = 'IDLE';
+                    statusEl.className = 'status-idle';
+                }, 1000);
+            };
+            
+            btnReset.onclick = () => {
+                trainer.stop();
+                logToConsole('Resetting session - page will reload...');
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            };
+            
+            // Initial console messages
+            logToConsole(`TensorFlow.js version: ${tf.version.tfjs}`);
+            logToConsole('Adaptive RL Module loaded successfully');
+            logToConsole('Environment: King of the Hill with dynamic goal repositioning');
+            logToConsole('Agent: Deep Q-Network with experience replay and target network');
+            logToConsole('');
+            logToConsole('READY - Click START TRAINING to begin');
+            logToConsole('');
+            logToConsole('What to watch for:');
+            logToConsole('  1. Episode Reward should INCREASE (agent is learning)');
+            logToConsole('  2. Epsilon should DECREASE (agent explores less over time)');
+            logToConsole('  3. Network Loss should DECREASE (predictions get better)');
+            logToConsole('  4. Move Interval changes randomly - watch the agent adapt!');
+        };
+    </script>
+</body>
+</html>
