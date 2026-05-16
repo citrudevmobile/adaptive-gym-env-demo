@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TensorFlow.js DQN - YOU vs AI</title>
+    <title>TensorFlow.js DQN - Three.js Tutorial + AI Game</title>
     <style>
         * {
             margin: 0;
@@ -159,12 +159,13 @@
             transition: width 0.3s;
         }
         
-        .status-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
+        .tutorial-note {
+            background: rgba(255, 170, 68, 0.1);
+            border-left: 3px solid #ffaa44;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 11px;
+            color: #ccc;
         }
         
         .sidebar::-webkit-scrollbar { width: 8px; }
@@ -237,6 +238,10 @@
                     <span class="metric-label">Exploration (ε):</span>
                     <span class="metric-value" id="epsilon">0.30</span>
                 </div>
+                <div class="metric-row">
+                    <span class="metric-label">Memory Size:</span>
+                    <span class="metric-value" id="memory">0</span>
+                </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="train-progress"></div>
                 </div>
@@ -267,23 +272,97 @@
                 <p><kbd>D</kbd> / <kbd>→</kbd> - Move RIGHT</p>
                 <p style="margin-top: 10px; color: #ffaa44;">🏆 Stand on GOLDEN HILL to score!</p>
             </div>
+            
+            <h2>📚 THREE.JS TUTORIAL</h2>
+            <div class="metric" style="font-size: 11px; line-height: 1.6;">
+                <p><strong>🎓 Learn Three.js from this game!</strong></p>
+                <p>Open your browser console (F12) to see detailed Three.js explanations!</p>
+                <p style="margin-top: 8px; color: #88aaff;">Every 3D element in this game is explained in the code comments!</p>
+            </div>
         </div>
     </div>
     
     <div class="controls-info">
         🎮 <strong>YOU are BLUE</strong> | WASD or Arrow Keys<br>
-        🤖 <strong>AI is RED</strong> | Neural Network DQN<br>
+        🤖 <strong>AI is RED</strong> | Neural Network DQN | 6→64→64→5<br>
         🟡 <strong>Stand on GOLD HILL</strong> to earn points!<br>
-        🧠 <strong>Train AI first</strong> (20 episodes) - takes ~10 seconds
+        📚 <strong>Open Console (F12)</strong> to see Three.js tutorial!
     </div>
 
-    <!-- Load Three.js and TensorFlow.js -->
+    <!-- ============================================================================
+     * THREE.JS TUTORIAL - PART 1: LOADING THE LIBRARY
+     * ============================================================================
+     * 
+     * Three.js is loaded from a CDN (Content Delivery Network):
+     * <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+     * 
+     * WHAT IS THREE.JS?
+     * -----------------
+     * Three.js is a JavaScript library that makes 3D graphics in the browser EASY.
+     * Without Three.js, you would have to write complex WebGL code directly.
+     * Three.js handles: cameras, lights, materials, shadows, animations, and more!
+     * 
+     * OTHER 3D OPTIONS:
+     * - Vanilla WebGL: Too complex for beginners
+     * - Babylon.js: Another great library, more game-focused
+     * - A-Frame: Built on Three.js, uses HTML tags
+     * 
+     * WHY THREE.JS?
+     * - Most popular 3D library (500k+ weekly downloads)
+     * - Great documentation and examples
+     * - Works on all modern browsers
+     * - Supports mobile devices
+     * ============================================================================
+     -->
+    
+    <!-- Load Three.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     
+    <!-- Load the RL module -->
+    <script src="tensorflow-adaptive-rl.js"></script>
+    
     <script>
+        // ============================================================================
+        // THREE.JS TUTORIAL - PART 2: THE CORE CONCEPTS
+        // ============================================================================
+        // 
+        // Before we start building 3D scenes, you need to understand 5 core concepts:
+        // 
+        // 1. SCENE - The container that holds everything (like a movie stage)
+        // 2. CAMERA - What you look through (like a camera filming the stage)
+        // 3. RENDERER - Draws what the camera sees on the screen
+        // 4. OBJECTS - 3D shapes (cubes, spheres, custom models)
+        // 5. LIGHTS - Makes objects visible and creates shadows
+        // 
+        // Think of it like making a movie:
+        // - Scene = The movie set
+        // - Camera = The camera filming
+        // - Renderer = The projector showing the film
+        // - Objects = Actors and props
+        // - Lights = Studio lighting
+        // 
+        // Let's create each of these for our game!
+        // ============================================================================
+        
         (function() {
-            console.log('Starting game...');
+            console.log('========================================');
+            console.log('🎓 THREE.JS TUTORIAL - Learn 3D Graphics!');
+            console.log('========================================');
+            console.log('');
+            console.log('This game contains a complete Three.js implementation.');
+            console.log('Read the code comments to learn every concept!');
+            console.log('');
+            console.log('CORE CONCEPTS:');
+            console.log('1. Scene - The 3D world container');
+            console.log('2. Camera - What you look through');
+            console.log('3. Renderer - Draws on screen');
+            console.log('4. Objects - 3D meshes (boxes, spheres, etc.)');
+            console.log('5. Lights - Makes objects visible');
+            console.log('6. Materials - How objects look (color, texture, shine)');
+            console.log('7. Shadows - Adds realism');
+            console.log('8. Animation Loop - Updates 60 times/second');
+            console.log('========================================');
             
             // Wait for DOM to be ready
             if (document.readyState === 'loading') {
@@ -293,37 +372,116 @@
             }
             
             function init() {
-                console.log('TensorFlow.js version:', tf.version.tfjs);
+                console.log('');
+                console.log('🎮 THREE.JS TUTORIAL - Game Starting!');
+                console.log('');
                 
-                // ============================================
-                // THREE.JS SETUP
-                // ============================================
+                // ================================================================
+                // STEP 1: GET THE CONTAINER ELEMENT
+                // ================================================================
+                // The container is a <div> in the HTML where we will place our 3D canvas.
+                // Three.js will create a <canvas> element and put it inside this div.
                 
                 const container = document.getElementById('canvas-container');
                 const width = container.clientWidth;
                 const height = container.clientHeight;
                 
+                console.log('📦 Container size:', width, 'x', height);
+                
+                // ================================================================
+                // STEP 2: CREATE THE SCENE
+                // ================================================================
+                // A Scene is like a 3D world. Everything you see (objects, lights,
+                // cameras) must be added to the scene.
+                // 
+                // Think of Scene as the "stage" where all the action happens.
+                
                 const scene = new THREE.Scene();
+                
+                // Set background color (using hex color: 0x0a1030 = dark blue)
                 scene.background = new THREE.Color(0x0a1030);
+                
+                // Add fog for depth effect (makes far objects fade into the background)
+                // Exponential fog: density 0.005 means objects fade slowly
                 scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
                 
+                console.log('✅ Scene created - this is our 3D world');
+                console.log('   Background color:', scene.background);
+                console.log('   Fog enabled - far objects fade away');
+                
+                // ================================================================
+                // STEP 3: CREATE THE CAMERA
+                // ================================================================
+                // The Camera determines what you see and from what angle.
+                // 
+                // THREE.PerspectiveCamera parameters:
+                // - FOV (Field of View): 50 degrees (human eye is ~60-75)
+                // - Aspect Ratio: width / height (prevents stretching)
+                // - Near plane: 0.1 (objects closer than this are invisible)
+                // - Far plane: 1000 (objects farther than this are invisible)
+                // 
+                // Types of cameras in Three.js:
+                // - PerspectiveCamera: Realistic, objects farther = smaller (what we use)
+                // - OrthographicCamera: No perspective, good for 2D games
+                // - CubeCamera: Renders 6 directions for reflections
+                
                 const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+                
+                // Position the camera: (x, y, z) coordinates
+                // - x: 0 (centered left/right)
+                // - y: 28 (high up, looking down)
+                // - z: 0 (centered front/back)
+                // This gives a top-down view of the entire arena
                 camera.position.set(0, 28, 0);
+                
+                // LookAt tells the camera what point to center on
+                // (0, 0, 0) is the center of the arena
                 camera.lookAt(0, 0, 0);
                 
+                console.log('📷 Camera created - Top-down view');
+                console.log('   Position: (0, 28, 0) - looking down at center');
+                console.log('   Field of View: 50 degrees');
+                console.log('   View distance: 0.1 to 1000 units');
+                
+                // ================================================================
+                // STEP 4: CREATE THE RENDERER
+                // ================================================================
+                // The Renderer takes the Scene and Camera and draws the 3D world
+                // onto a <canvas> element on your screen.
+                // 
+                // WebGLRenderer uses the GPU (graphics card) for fast rendering.
+                // This is what makes 60fps animations possible!
+                
                 const renderer = new THREE.WebGLRenderer({ antialias: true });
+                
+                // antialias: true removes jagged edges (smooths diagonal lines)
                 renderer.setSize(width, height);
+                
+                // Enable shadows (makes the game look more realistic)
                 renderer.shadowMap.enabled = true;
+                
+                // Add the renderer's canvas to our container div
                 container.appendChild(renderer.domElement);
                 
-                // HTML labels
+                console.log('🎨 Renderer created - draws 3D graphics on screen');
+                console.log('   Size:', width, 'x', height);
+                console.log('   Shadows enabled - objects cast shadows');
+                console.log('   Antialiasing on - smooth edges');
+                
+                // ================================================================
+                // STEP 5: CREATE HTML LABELS (2D overlays for text)
+                // ================================================================
+                // Three.js can render 3D text, but it's complex.
+                // For simple labels, we use HTML divs that follow 3D objects.
+                // This technique is called "billboarding" or "sprite labels".
+                
                 const labelContainer = document.createElement('div');
                 labelContainer.style.position = 'absolute';
                 labelContainer.style.top = '0';
                 labelContainer.style.left = '0';
                 labelContainer.style.width = '100%';
                 labelContainer.style.height = '100%';
-                labelContainer.style.pointerEvents = 'none';
+                labelContainer.style.pointerEvents = 'none'; // Let clicks pass through
                 labelContainer.style.zIndex = '100';
                 container.appendChild(labelContainer);
                 
@@ -341,65 +499,130 @@
                 const humanLabel = makeLabel('🧑 YOU', '#44aaff');
                 const agentLabel = makeLabel('🤖 AI', '#ff8888');
                 
+                // Function to convert 3D world position to 2D screen position
                 function updateLabelPosition(label, x, z) {
+                    // Create a 3D vector at the object's position
                     const vec = new THREE.Vector3(x, 1.5, z);
+                    
+                    // Project from 3D world to 2D screen coordinates
                     vec.project(camera);
+                    
+                    // Convert from normalized coordinates (-1 to 1) to pixel coordinates
                     const screenX = (vec.x * 0.5 + 0.5) * width;
                     const screenY = (-vec.y * 0.5 + 0.5) * height;
+                    
+                    // Position the HTML div
                     label.style.left = screenX + 'px';
                     label.style.top = (screenY - 25) + 'px';
                 }
                 
-                // Lights
-                const ambientLight = new THREE.AmbientLight(0x404060);
+                console.log('🏷️ HTML labels created - text that follows 3D objects');
+                
+                // ================================================================
+                // STEP 6: ADD LIGHTS
+                // ================================================================
+                // Without lights, everything is black! Lights make objects visible.
+                // Types of lights in Three.js:
+                // 
+                // - AmbientLight: Background light, illuminates everything evenly
+                // - DirectionalLight: Like the sun, comes from one direction
+                // - PointLight: Like a light bulb, shines in all directions
+                // - SpotLight: Like a flashlight, shines in a cone
+                // - HemisphereLight: Sky + ground color combination
+                
+                // AmbientLight - fills the scene with soft light
+                // Without this, shadows would be completely black
+                const ambientLight = new THREE.AmbientLight(0x404060); // Dark blue-gray
                 scene.add(ambientLight);
                 
+                // DirectionalLight - simulates the sun
+                // Parameters: color, intensity
                 const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
-                sunLight.position.set(10, 20, 5);
-                sunLight.castShadow = true;
+                sunLight.position.set(10, 20, 5); // (x, y, z) position
+                sunLight.castShadow = true;       // This light casts shadows
                 scene.add(sunLight);
                 
+                // PointLight - fills dark areas
                 const fillLight = new THREE.PointLight(0x4466cc, 0.4);
                 fillLight.position.set(0, 5, 0);
                 scene.add(fillLight);
                 
-                // Ground
+                console.log('💡 Lights added: Ambient, Directional (sun), Fill');
+                console.log('   Ambient: soft blue glow');
+                console.log('   Directional: bright sunlight from (10,20,5)');
+                console.log('   Fill: soft blue from below');
+                
+                // ================================================================
+                // STEP 7: CREATE THE GROUND (GRID HELPER)
+                // ================================================================
+                // GridHelper creates a reference grid on the ground.
+                // Helps players see distance and orientation.
+                // Parameters: size (units), divisions (number of lines)
+                
                 const gridHelper = new THREE.GridHelper(45, 20, 0x88aaff, 0x335588);
-                gridHelper.position.y = -0.5;
+                gridHelper.position.y = -0.5; // Move slightly down
                 scene.add(gridHelper);
                 
-                // Arena bounds
+                console.log('🔲 Grid helper created - shows the arena floor');
+                console.log('   Size: 45 units, Divisions: 20 lines');
+                
+                // ================================================================
+                // STEP 8: CREATE ARENA BOUNDARIES (LINE OBJECTS)
+                // ================================================================
+                // LineBasicMaterial creates visible lines.
+                // BufferGeometry defines where the lines go.
+                
                 const boundsMat = new THREE.LineBasicMaterial({ color: 0x88aaff });
                 const arenaSize = 18;
+                
+                // Define the 4 corners of the arena boundary
+                // Points are connected in order to form a square
                 const boundsPoints = [
-                    new THREE.Vector3(-arenaSize, -0.5, -arenaSize), new THREE.Vector3(arenaSize, -0.5, -arenaSize),
-                    new THREE.Vector3(arenaSize, -0.5, arenaSize), new THREE.Vector3(-arenaSize, -0.5, arenaSize),
-                    new THREE.Vector3(-arenaSize, -0.5, -arenaSize)
+                    new THREE.Vector3(-arenaSize, -0.5, -arenaSize), // Bottom-left
+                    new THREE.Vector3(arenaSize, -0.5, -arenaSize),  // Bottom-right
+                    new THREE.Vector3(arenaSize, -0.5, arenaSize),   // Top-right
+                    new THREE.Vector3(-arenaSize, -0.5, arenaSize),  // Top-left
+                    new THREE.Vector3(-arenaSize, -0.5, -arenaSize)  // Back to start
                 ];
+                
                 const boundsGeo = new THREE.BufferGeometry().setFromPoints(boundsPoints);
                 const boundsLine = new THREE.Line(boundsGeo, boundsMat);
                 scene.add(boundsLine);
                 
-                // ============================================
-                // THE HILL
-                // ============================================
+                console.log('📐 Arena boundaries created - white lines mark the edges');
+                
+                // ================================================================
+                // STEP 9: CREATE THE HILL (SCORING ZONE) - Complex 3D Object
+                // ================================================================
+                // A Group can contain multiple meshes (objects).
+                // This allows us to move everything together.
                 
                 const hillGroup = new THREE.Group();
+                
+                // CylinderGeometry(radiusTop, radiusBottom, height, radialSegments)
+                // radialSegments controls smoothness (higher = smoother)
                 const hillBase = new THREE.Mesh(
                     new THREE.CylinderGeometry(2.5, 2.8, 0.3, 32),
-                    new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200, metalness: 0.7 })
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xffaa44,      // Golden color
+                        emissive: 0x442200,    // Slight glow
+                        metalness: 0.7,        // Metallic appearance
+                        roughness: 0.3         // Slightly shiny
+                    })
                 );
-                hillBase.castShadow = true;
+                hillBase.castShadow = true;     // This object casts shadow
                 hillGroup.add(hillBase);
                 
+                // TorusGeometry is a donut shape! (radius, tube, radialSegments, tubularSegments)
                 const hillRing = new THREE.Mesh(
                     new THREE.TorusGeometry(2.3, 0.1, 32, 64),
                     new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0xff6600 })
                 );
-                hillRing.rotation.x = Math.PI / 2;
+                hillRing.rotation.x = Math.PI / 2; // Rotate to lay flat
                 hillRing.position.y = 0.2;
                 hillGroup.add(hillRing);
                 
+                // Cylinder as a beacon on top
                 const hillBeacon = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8),
                     new THREE.MeshStandardMaterial({ color: 0xff8844, emissive: 0xff4400 })
@@ -408,53 +631,95 @@
                 hillGroup.add(hillBeacon);
                 
                 scene.add(hillGroup);
+                
+                // Add a point light that follows the hill
                 const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
                 scene.add(hillLight);
                 
-                // ============================================
-                // HUMAN PLAYER (BLUE)
-                // ============================================
+                console.log('🏔️ Hill created - a golden platform with a glowing ring');
+                console.log('   Made of: Base cylinder + Torus ring + Beacon');
+                console.log('   Follows the hill using a Group');
+                
+                // ================================================================
+                // STEP 10: CREATE THE HUMAN PLAYER (BLUE ROBOT)
+                // ================================================================
+                // Building characters from basic shapes (BoxGeometry, SphereGeometry)
                 
                 const humanGroup = new THREE.Group();
-                const humanBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.7 }));
+                
+                // Body: BoxGeometry(width, height, depth)
+                const humanBody = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 0.8, 0.8),
+                    new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.7 })
+                );
                 humanBody.castShadow = true;
                 humanGroup.add(humanBody);
                 
-                const humanHead = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x88ccff }));
+                // Head: SphereGeometry(radius, widthSegments, heightSegments)
+                const humanHead = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 32, 32),
+                    new THREE.MeshStandardMaterial({ color: 0x88ccff })
+                );
                 humanHead.position.y = 0.7;
                 humanGroup.add(humanHead);
                 
-                const humanEye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff }));
+                // Eyes: small spheres with emissive material (glow)
+                const humanEye = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff })
+                );
                 humanEye.position.set(0.25, 0.85, 0.45);
                 humanGroup.add(humanEye);
                 
-                const humanEye2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff }));
+                const humanEye2 = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x44aaff })
+                );
                 humanEye2.position.set(-0.25, 0.85, 0.45);
                 humanGroup.add(humanEye2);
                 
                 scene.add(humanGroup);
                 
-                // ============================================
-                // AI AGENT (RED)
-                // ============================================
+                console.log('👤 Human player created - blue robot');
+                console.log('   Made of: Box body + Sphere head + Sphere eyes');
+                console.log('   Glowing eyes use emissive material');
+                
+                // ================================================================
+                // STEP 11: CREATE THE AI AGENT (RED ROBOT)
+                // ================================================================
+                // Similar to human, but red with an antenna
                 
                 const agentGroup = new THREE.Group();
-                const agentBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.7 }));
+                
+                const agentBody = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 0.8, 0.8),
+                    new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.7 })
+                );
                 agentBody.castShadow = true;
                 agentGroup.add(agentBody);
                 
-                const agentHead = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff8888 }));
+                const agentHead = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 32, 32),
+                    new THREE.MeshStandardMaterial({ color: 0xff8888 })
+                );
                 agentHead.position.y = 0.7;
                 agentGroup.add(agentHead);
                 
-                const agentEye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 }));
+                const agentEye = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 })
+                );
                 agentEye.position.set(0.25, 0.85, 0.45);
                 agentGroup.add(agentEye);
                 
-                const agentEye2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 }));
+                const agentEye2 = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4444 })
+                );
                 agentEye2.position.set(-0.25, 0.85, 0.45);
                 agentGroup.add(agentEye2);
                 
+                // Antenna: a small cylinder on top
                 const antennaMat = new THREE.MeshStandardMaterial({ color: 0xff6666, emissive: 0xff2200 });
                 const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 6), antennaMat);
                 antenna.position.y = 1.0;
@@ -462,22 +727,34 @@
                 
                 scene.add(agentGroup);
                 
-                // ============================================
-                // TRAILS
-                // ============================================
+                console.log('🤖 AI agent created - red robot with antenna');
+                
+                // ================================================================
+                // STEP 12: CREATE TRAIL EFFECTS (Points System)
+                // ================================================================
+                // Points are individual dots in 3D space.
+                // We use them to show where players have been.
                 
                 let humanTrail = [], agentTrail = [];
+                
+                // PointsMaterial makes each point a colored dot
                 const trailMat = new THREE.PointsMaterial({ color: 0x44aaff, size: 0.1 });
                 const agentTrailMat = new THREE.PointsMaterial({ color: 0xff4444, size: 0.1 });
+                
                 let humanTrailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
                 let agentTrailPoints = new THREE.Points(new THREE.BufferGeometry(), agentTrailMat);
                 scene.add(humanTrailPoints);
                 scene.add(agentTrailPoints);
                 
-                // ============================================
-                // GAME STATE
-                // ============================================
+                console.log('✨ Trail effects created - Points system shows movement history');
                 
+                // ================================================================
+                // STEP 13: GAME LOGIC & ANIMATION LOOP
+                // ================================================================
+                // The animation loop runs 60 times per second (60fps)
+                // Each frame: update positions, check collisions, render scene
+                
+                // Game state variables
                 const bounds = 17;
                 const hillR = 2.5;
                 const HUMAN_SPEED = 7.5;
@@ -501,110 +778,10 @@
                 
                 const keys = { w: false, s: false, a: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
                 
-                // ============================================
-                // TENSORFLOW.JS AGENT - FIXED LOSS FUNCTION
-                // ============================================
+                // Create the AI agent (from tensorflow-adaptive-rl.js)
+                const agent = new TensorFlowDQNAgent();
                 
-                class DQNAgent {
-                    constructor() {
-                        this.epsilon = 0.3;
-                        this.episodes = 0;
-                        this.memory = [];
-                        this.memorySize = 3000;
-                        
-                        // Build neural network - using correct loss function name
-                        this.model = tf.sequential();
-                        this.model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [6] }));
-                        this.model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
-                        this.model.add(tf.layers.dense({ units: 5, activation: 'linear' }));
-                        
-                        // FIX: Use 'meanSquaredError' instead of 'mse'
-                        this.model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
-                        
-                        console.log('AI Agent created with meanSquaredError loss');
-                    }
-                    
-                    getObs(pos, hill, steps, interval, inZone) {
-                        return [
-                            pos.x / 18, pos.z / 18,
-                            hill.x / 18, hill.z / 18,
-                            Math.min(1, steps / interval),
-                            inZone ? 1 : 0
-                        ];
-                    }
-                    
-                    async getAction(pos, hill, steps, interval, inZone) {
-                        const obs = this.getObs(pos, hill, steps, interval, inZone);
-                        const input = tf.tensor2d([obs], [1, 6]);
-                        const qValues = this.model.predict(input);
-                        const values = await qValues.data();
-                        input.dispose();
-                        qValues.dispose();
-                        
-                        if (Math.random() < this.epsilon) {
-                            return Math.floor(Math.random() * 5);
-                        }
-                        return values.indexOf(Math.max(...values));
-                    }
-                    
-                    async train(obs, action, reward, nextObs, done) {
-                        this.memory.push({ obs, action, reward, nextObs, done });
-                        if (this.memory.length > this.memorySize) this.memory.shift();
-                        if (this.memory.length < 32) return;
-                        
-                        // Sample batch
-                        const batch = [];
-                        const indices = new Set();
-                        while (indices.size < 32) {
-                            indices.add(Math.floor(Math.random() * this.memory.length));
-                        }
-                        for (const idx of indices) batch.push(this.memory[idx]);
-                        
-                        const states = batch.map(e => e.obs);
-                        const nextStates = batch.map(e => e.nextObs);
-                        
-                        const currentQTensor = this.model.predict(tf.tensor2d(states, [32, 6]));
-                        const currentQ = await currentQTensor.array();
-                        const nextQTensor = this.model.predict(tf.tensor2d(nextStates, [32, 6]));
-                        const nextQ = await nextQTensor.array();
-                        
-                        const targets = [];
-                        for (let i = 0; i < 32; i++) {
-                            const target = [...currentQ[i]];
-                            const a = batch[i].action;
-                            const r = batch[i].reward;
-                            const d = batch[i].done;
-                            
-                            if (d) {
-                                target[a] = r;
-                            } else {
-                                target[a] = r + 0.95 * Math.max(...nextQ[i]);
-                            }
-                            targets.push(target);
-                        }
-                        
-                        const xs = tf.tensor2d(states, [32, 6]);
-                        const ys = tf.tensor2d(targets, [32, 5]);
-                        await this.model.fit(xs, ys, { epochs: 1, verbose: 0 });
-                        
-                        xs.dispose(); ys.dispose();
-                        currentQTensor.dispose(); nextQTensor.dispose();
-                        
-                        this.epsilon = Math.max(0.05, this.epsilon * 0.995);
-                    }
-                    
-                    updateUI() {
-                        document.getElementById('epsilon').textContent = this.epsilon.toFixed(3);
-                        document.getElementById('train-episodes').textContent = this.episodes;
-                    }
-                }
-                
-                const agent = new DQNAgent();
-                
-                // ============================================
-                // HELPERS
-                // ============================================
-                
+                // Helper functions
                 function randomPos() {
                     const margin = 3;
                     return {
@@ -657,10 +834,7 @@
                     }
                 }
                 
-                // ============================================
-                // TRAINING
-                // ============================================
-                
+                // Training function
                 let training = false;
                 
                 async function trainAI(episodes = 20) {
@@ -672,7 +846,7 @@
                     statusEl.textContent = "TRAINING AI";
                     statusEl.className = 'status-training';
                     trainStatusEl.innerHTML = 'Training in progress...';
-                    console.log('Starting training for', episodes, 'episodes');
+                    console.log('🧠 Starting AI training for', episodes, 'episodes');
                     
                     for (let ep = 0; ep < episodes; ep++) {
                         let tAgent = randomPos();
@@ -685,9 +859,9 @@
                         for (let step = 0; step < 300; step++) {
                             tSteps++;
                             
-                            const obs = agent.getObs(tAgent, tHill, tSteps, tInterval, false);
+                            const obs = agent.getObservation(tAgent, tHill, tSteps, tInterval, false);
                             let action;
-                            if (Math.random() < agent.epsilon) {
+                            if (Math.random() < agent.getEpsilon()) {
                                 action = Math.floor(Math.random() * 5);
                             } else {
                                 const input = tf.tensor2d([obs], [1, 6]);
@@ -719,12 +893,11 @@
                                 }
                             }
                             
-                            const nextObs = agent.getObs(tAgent, tHill, tSteps, tInterval, inZone);
+                            const nextObs = agent.getObservation(tAgent, tHill, tSteps, tInterval, inZone);
                             await agent.train(obs, action, reward, nextObs, false);
                         }
                         
-                        agent.episodes++;
-                        agent.updateUI();
+                        agent.incrementEpisode();
                         
                         const progress = ((ep + 1) / episodes) * 100;
                         document.getElementById('train-progress').style.width = `${progress}%`;
@@ -737,12 +910,12 @@
                     statusEl.textContent = "Ready";
                     statusEl.className = 'status-idle';
                     trainStatusEl.innerHTML = 'Training complete! AI is ready!';
-                    console.log('Training complete! Final epsilon:', agent.epsilon);
+                    console.log('✅ Training complete! Final epsilon:', agent.getEpsilon());
                 }
                 
-                // ============================================
-                // MOVEMENT
-                // ============================================
+                // ================================================================
+                // STEP 14: MOVEMENT AND GAME UPDATE FUNCTIONS
+                // ================================================================
                 
                 function updateHuman(delta) {
                     let mx = 0, mz = 0;
@@ -794,7 +967,7 @@
                         gameActive = false;
                         document.getElementById('game-status').textContent = "GAME OVER";
                         document.getElementById('game-status').className = 'status-idle';
-                        console.log(`GAME OVER! You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
+                        console.log(`🏆 GAME OVER! You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
                         return;
                     }
                     
@@ -809,6 +982,7 @@
                         stepsSinceLastMove = 0;
                         goalChanges++;
                         
+                        // Flash effect when hill moves
                         const flash = new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true });
                         const sphere = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), flash);
                         sphere.position.set(hillPos.x, 0.5, hillPos.z);
@@ -818,7 +992,7 @@
                         if (Math.random() < 0.3) {
                             const old = currentInterval;
                             currentInterval = Math.max(40, Math.min(160, currentInterval * (Math.random() < 0.5 ? 0.8 : 1.2)));
-                            console.log(`Interval: ${old} → ${currentInterval}`);
+                            console.log(`🌍 Adaptive Environment: Interval ${old} → ${currentInterval}`);
                         }
                     }
                     
@@ -869,9 +1043,9 @@
                     updateLabelPosition(agentLabel, agentPos.x, agentPos.z);
                 }
                 
-                // ============================================
-                // CONTROLS
-                // ============================================
+                // ================================================================
+                // STEP 15: KEYBOARD EVENT HANDLERS
+                // ================================================================
                 
                 window.addEventListener('keydown', (e) => {
                     if (keys.hasOwnProperty(e.key)) {
@@ -886,6 +1060,10 @@
                         e.preventDefault();
                     }
                 });
+                
+                // ================================================================
+                // STEP 16: BUTTON EVENT HANDLERS
+                // ================================================================
                 
                 document.getElementById('btn-start').onclick = () => {
                     if (training) { alert('Wait for training to finish!'); return; }
@@ -910,7 +1088,7 @@
                     
                     document.getElementById('game-status').textContent = "PLAYING";
                     document.getElementById('game-status').className = 'status-playing';
-                    console.log('GAME STARTED! Use WASD to move. Stand on the GOLD HILL!');
+                    console.log('🎮 GAME STARTED! Use WASD to move the BLUE robot!');
                 };
                 
                 document.getElementById('btn-train').onclick = async () => {
@@ -935,49 +1113,84 @@
                     
                     document.getElementById('game-status').textContent = "Ready";
                     document.getElementById('game-status').className = 'status-idle';
-                    console.log('Game reset.');
+                    console.log('🔄 Game reset.');
                 };
                 
-                // ============================================
-                // ANIMATION
-                // ============================================
+                // ================================================================
+                // STEP 17: THE ANIMATION LOOP (60 FPS)
+                // ================================================================
+                // This is the heart of any 3D application!
+                // requestAnimationFrame calls this function ~60 times per second.
+                // Each frame: update positions, then render the scene.
                 
                 let lastTime = performance.now() / 1000;
                 
                 function animate() {
+                    // Calculate time difference since last frame (delta time)
                     const now = performance.now() / 1000;
                     let delta = Math.min(0.033, now - lastTime);
                     if (delta < 0.01) delta = 0.016;
                     lastTime = now;
                     
+                    // Update game logic if active
                     if (gameActive && !training) {
                         updateHuman(delta);
                         updateAgent(delta, now);
                         updateGame(delta);
                     }
                     
+                    // Rotate the hill's ring (animation)
                     hillRing.rotation.z += delta * 3;
+                    
+                    // RENDER THE SCENE! This actually draws everything.
                     renderer.render(scene, camera);
+                    
+                    // Call this function again next frame
                     requestAnimationFrame(animate);
                 }
                 
+                // Start the animation loop
                 animate();
                 
+                // Handle window resizing
                 window.addEventListener('resize', () => {
                     const w = container.clientWidth;
                     const h = container.clientHeight;
                     camera.aspect = w / h;
-                    camera.updateProjectionMatrix();
+                    camera.updateProjectionMatrix();  // Must update when aspect changes
                     renderer.setSize(w, h);
                 });
                 
-                console.log('================================================');
-                console.log('READY! Follow these steps:');
-                console.log('1. Click "Train AI (20 episodes)" - takes ~10 seconds');
-                console.log('2. Wait for training to complete');
-                console.log('3. Click "Start Game" to play against the AI');
-                console.log('4. Use WASD or Arrow keys to move the BLUE robot');
-                console.log('================================================');
+                console.log('');
+                console.log('========================================');
+                console.log('🎓 THREE.JS TUTORIAL SUMMARY');
+                console.log('========================================');
+                console.log('');
+                console.log('You have seen these Three.js concepts:');
+                console.log('');
+                console.log('1. Scene         - The 3D world container');
+                console.log('2. Camera        - PerspectiveCamera with FOV 50');
+                console.log('3. Renderer      - WebGLRenderer with shadows');
+                console.log('4. Geometries    - Box, Sphere, Cylinder, Torus');
+                console.log('5. Materials     - Standard, Basic, Points');
+                console.log('6. Lights        - Ambient, Directional, Point');
+                console.log('7. Groups        - Group multiple objects');
+                console.log('8. Points        - Trail effects');
+                console.log('9. Shadows       - castShadow/receiveShadow');
+                console.log('10. Animation    - requestAnimationFrame loop');
+                console.log('11. Delta Time   - Smooth movement');
+                console.log('12. HTML Labels  - 2D text following 3D objects');
+                console.log('');
+                console.log('🚀 Ready to build your own 3D games!');
+                console.log('========================================');
+                console.log('');
+                console.log('🎮 HOW TO PLAY:');
+                console.log('1. Click "Train AI" first (20 episodes)');
+                console.log('2. Wait ~10 seconds for training');
+                console.log('3. Click "Start Game"');
+                console.log('4. Use WASD or Arrow keys to move BLUE robot');
+                console.log('5. Stand on the GOLDEN HILL to score points!');
+                console.log('========================================');
             }
         })();
     </script>
