@@ -137,27 +137,6 @@ Version 2 uses a **Neural Network** to approximate Q-values instead of storing t
 - **Tuning required** - hyperparameters matter more
 - **Less transparent** - can't easily inspect "what the network learned"
 
-### When to Use Version 2
-
-- Teaching modern deep reinforcement learning
-- When the state space is large or continuous
-- When you need generalization to new situations
-- When you want to prepare for real-world RL applications
-
-adaptive-rl-repo/
-│
-├── 📁 Version 1: Classical Q-Learning
-│   ├── adaptive-rl.js              # Q-Table agent + environment + trainer
-│   └── index.html                  # Demo page with Three.js visualization
-│
-├── 📁 Version 2: TensorFlow.js DQN
-│   ├── tensorflow-adaptive-rl.js   # Neural network DQN agent
-│   └── tensorflow-adaptive-rl-demo.html  # Demo page with full UI
-│
-└── 📄 README.md                    # This file
-
----
-
 ## The Adaptive Features (Both Versions)
 
 Both versions share the same adaptive environment:
