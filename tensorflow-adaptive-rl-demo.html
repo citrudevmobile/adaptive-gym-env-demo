@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TensorFlow.js DQN - YOU vs AI (Smooth Movement)</title>
+    <title>TensorFlow.js DQN - YOU vs AI (Full Camera + Training)</title>
     <style>
         * {
             margin: 0;
@@ -143,6 +143,12 @@
             background: #666;
         }
         
+        .status-training {
+            background: #ffaa44;
+            color: #1a1a2e;
+            animation: pulse 1s infinite;
+        }
+        
         .controls-info {
             position: absolute;
             bottom: 20px;
@@ -165,6 +171,22 @@
             color: #ffaa44;
         }
         
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa44, #ff6600);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
         .sidebar::-webkit-scrollbar {
             width: 8px;
         }
@@ -185,7 +207,7 @@
         
         <div class="sidebar">
             <h1>👥 YOU vs TENSORFLOW.JS DQN</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Two Player | Human vs Neural Network AI | Smooth Movement</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Two Player | Human vs Neural Network AI | Training Enabled</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -196,9 +218,13 @@
                     <span class="metric-label">Time Remaining:</span>
                     <span class="metric-value" id="timer">60.0</span>
                 </div>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="button" id="btn-start">▶ Start Game (60 seconds)</button>
-                    <button class="button button-secondary" id="btn-reset">🔄 Reset Game</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="game-progress"></div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                    <button class="button" id="btn-start">▶ Start Game (60s)</button>
+                    <button class="button" id="btn-train">🧠 Train AI (100 episodes)</button>
+                    <button class="button button-secondary" id="btn-reset">🔄 Reset</button>
                 </div>
             </div>
             
@@ -226,19 +252,34 @@
                 </div>
             </div>
             
-            <h2>🧠 AI NEURAL NETWORK</h2>
+            <h2>🧠 AI LEARNING PROGRESS</h2>
             <div class="metric">
                 <div class="metric-row">
-                    <span class="metric-label">Architecture:</span>
+                    <span class="metric-label">Neural Network:</span>
                     <span class="metric-value">6 → 64 → 64 → 5</span>
                 </div>
                 <div class="metric-row">
-                    <span class="metric-label">AI Strategy:</span>
-                    <span class="metric-value" id="strategy">Balanced</span>
+                    <span class="metric-label">Training Episodes:</span>
+                    <span class="metric-value" id="train-episodes">0</span>
                 </div>
                 <div class="metric-row">
-                    <span class="metric-label">Training Status:</span>
-                    <span class="metric-value" id="train-status">Pretrained ✓</span>
+                    <span class="metric-label">Exploration (ε):</span>
+                    <span class="metric-value" id="epsilon">0.30</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Network Loss:</span>
+                    <span class="metric-value" id="loss">0.0000</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Memory Size:</span>
+                    <span class="metric-value" id="memory">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">AI Strategy:</span>
+                    <span class="metric-value" id="strategy">Learning...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="train-progress"></div>
                 </div>
             </div>
             
@@ -264,17 +305,17 @@
                 <p><kbd>S</kbd> / <kbd>↓</kbd> - Move DOWN</p>
                 <p><kbd>A</kbd> / <kbd>←</kbd> - Move LEFT</p>
                 <p><kbd>D</kbd> / <kbd>→</kbd> - Move RIGHT</p>
-                <p style="margin-top: 10px; color: #ffaa44;">🏆 Stand on the GOLDEN HILL to score!</p>
-                <p style="color: #88aaff;">🤖 Red AI is pretrained - smooth, no lag!</p>
+                <p style="margin-top: 10px; color: #ffaa44;">🏆 Stand on GOLDEN HILL to score!</p>
+                <p style="color: #88aaff;">🤖 Train AI first to make it smarter!</p>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🎮 <strong>YOU are BLUE</strong> | WASD or Arrow Keys to move<br>
-        🤖 <strong>AI is RED</strong> | Neural Network DQN (Pretrained)<br>
+        🎮 <strong>CAMERA shows ALL:</strong> You (Blue) + AI (Red) + Hill (Gold)<br>
         🟡 <strong>Stand on GOLD HILL</strong> to earn points!<br>
-        ⏱️ Game lasts <strong>60 seconds</strong> | Hill moves every ~8 seconds
+        🚫 <strong>Collision Detection:</strong> Players bounce off each other<br>
+        🧠 <strong>Train AI first</strong> - then play against a smarter opponent!
     </div>
 
     <!-- Three.js for 3D visualization -->
@@ -301,8 +342,9 @@
         scene.background = new THREE.Color(0x0a1030);
         scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
         
-        const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(0, 25, 20);
+        // FIXED CAMERA: Top-down view that shows EVERYTHING
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 28, 0);
         camera.lookAt(0, 0, 0);
         
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -372,6 +414,29 @@
         const hillLight = new THREE.PointLight(0xff6600, 0.6, 15);
         scene.add(hillLight);
         
+        // Add a floating label above the hill
+        const hillLabelDiv = document.createElement('div');
+        hillLabelDiv.textContent = '🏆 HILL 🏆';
+        hillLabelDiv.style.color = '#ffaa44';
+        hillLabelDiv.style.fontSize = '14px';
+        hillLabelDiv.style.fontWeight = 'bold';
+        hillLabelDiv.style.textShadow = '0 0 10px rgba(255,68,0,0.8)';
+        hillLabelDiv.style.background = 'rgba(0,0,0,0.6)';
+        hillLabelDiv.style.padding = '2px 10px';
+        hillLabelDiv.style.borderRadius = '20px';
+        const hillLabel = new THREE.CSS2DObject(hillLabelDiv);
+        hillLabel.position.y = 2.0;
+        hillGroup.add(hillLabel);
+        
+        // Need CSS2DRenderer for labels
+        const labelRenderer = new THREE.CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(labelRenderer.domElement);
+        
         // ============================================
         // HUMAN PLAYER (BLUE)
         // ============================================
@@ -408,6 +473,18 @@
         
         scene.add(humanGroup);
         
+        const humanLabelDiv = document.createElement('div');
+        humanLabelDiv.textContent = '🧑 YOU';
+        humanLabelDiv.style.color = '#44aaff';
+        humanLabelDiv.style.fontSize = '12px';
+        humanLabelDiv.style.fontWeight = 'bold';
+        humanLabelDiv.style.background = 'rgba(0,0,0,0.5)';
+        humanLabelDiv.style.padding = '2px 8px';
+        humanLabelDiv.style.borderRadius = '12px';
+        const humanLabel = new THREE.CSS2DObject(humanLabelDiv);
+        humanLabel.position.y = 1.2;
+        humanGroup.add(humanLabel);
+        
         // ============================================
         // AI AGENT (RED)
         // ============================================
@@ -442,13 +519,25 @@
         agentEye2.position.set(-0.25, 0.85, 0.45);
         agentGroup.add(agentEye2);
         
-        // Agent antenna (to distinguish from human)
+        // Agent antenna
         const antennaMat = new THREE.MeshStandardMaterial({ color: 0xff6666, emissive: 0xff2200 });
         const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 6), antennaMat);
         antenna.position.y = 1.0;
         agentGroup.add(antenna);
         
         scene.add(agentGroup);
+        
+        const agentLabelDiv = document.createElement('div');
+        agentLabelDiv.textContent = '🤖 AI';
+        agentLabelDiv.style.color = '#ff8888';
+        agentLabelDiv.style.fontSize = '12px';
+        agentLabelDiv.style.fontWeight = 'bold';
+        agentLabelDiv.style.background = 'rgba(0,0,0,0.5)';
+        agentLabelDiv.style.padding = '2px 8px';
+        agentLabelDiv.style.borderRadius = '12px';
+        const agentLabel = new THREE.CSS2DObject(agentLabelDiv);
+        agentLabel.position.y = 1.2;
+        agentGroup.add(agentLabel);
         
         // ============================================
         // TRAIL EFFECTS
@@ -473,12 +562,10 @@
         const hillRadius = 2.5;
         const HUMAN_SPEED = 7.5;
         const AGENT_SPEED = 7.2;
+        const COLLISION_RADIUS = 0.9;
         
-        // Target positions for smooth interpolation
-        let humanTargetPos = { x: -5, z: -3 };
-        let agentTargetPos = { x: 5, z: 3 };
-        let humanCurrentPos = { x: -5, z: -3 };
-        let agentCurrentPos = { x: 5, z: 3 };
+        let humanPos = { x: -5, z: -3 };
+        let agentPos = { x: 5, z: 3 };
         let hillPos = { x: 0, z: 0 };
         
         let humanScore = 0;
@@ -495,26 +582,43 @@
         
         // AI decision timing
         let lastAIDecisionTime = 0;
-        const AI_DECISION_INTERVAL = 0.15; // Decide every 0.15 seconds (smooth but not every frame)
-        let currentAIAction = 4; // Start with STAY action
-        let aiDecisionCounter = 0;
+        let currentAIAction = 4;
         
-        // Keyboard state for human
+        // Keyboard state
         const keyState = {
             w: false, s: false, a: false, d: false,
             ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false
         };
         
         // ============================================
-        // TENSORFLOW.JS DQN AGENT (WITHOUT TRAINING DURING GAME)
+        // TENSORFLOW.JS DQN AGENT (WITH TRAINING)
         // ============================================
         
-        class SmoothDQNAgent {
+        class TrainableDQNAgent {
             constructor() {
-                // Build the neural network
-                this.mainNetwork = this._buildNetwork();
+                this.learningRate = 0.001;
+                this.discountFactor = 0.95;
+                this.epsilon = 0.3;
+                this.epsilonMin = 0.05;
+                this.epsilonDecay = 0.995;
                 
-                // Random weights for initial behavior (will improve as game runs)
+                this.memory = [];
+                this.memorySize = 10000;
+                this.batchSize = 32;
+                this.targetUpdateFreq = 100;
+                this.trainStep = 0;
+                
+                this.recentRewards = [];
+                this.totalSteps = 0;
+                this.lastLoss = 0;
+                this.trainingEpisodes = 0;
+                
+                this.mainNetwork = this._buildNetwork();
+                this.targetNetwork = this._buildNetwork();
+                this._updateTargetNetwork();
+                
+                this.optimizer = tf.train.adam(this.learningRate);
+                
                 console.log('🤖 AI Agent initialized with neural network');
             }
             
@@ -524,6 +628,11 @@
                 model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
                 model.add(tf.layers.dense({ units: 5, activation: 'linear' }));
                 return model;
+            }
+            
+            _updateTargetNetwork() {
+                const weights = this.mainNetwork.getWeights();
+                this.targetNetwork.setWeights(weights);
             }
             
             _getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone) {
@@ -536,7 +645,7 @@
                 return new Float32Array([normX, normZ, hillNormX, hillNormZ, timeNorm, inZoneFlag]);
             }
             
-            _getQValues(observation) {
+            async getQValues(observation) {
                 const inputTensor = tf.tensor2d([observation], [1, 6]);
                 const qValues = this.mainNetwork.predict(inputTensor);
                 const values = qValues.dataSync();
@@ -545,44 +654,244 @@
                 return values;
             }
             
-            getAction(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone, humanInZone) {
+            async getAction(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone, humanInZone, training = false) {
                 const observation = this._getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone);
-                const qValues = this._getQValues(observation);
                 
-                // Simple strategy selection based on game state
                 let strategy = "balanced";
                 if (humanInZone && !inZone) {
                     strategy = "aggressive";
-                    // Boost Q-values for moving toward hill when human is winning
-                    // This is a simple heuristic to make AI more competitive
                 } else if (inZone && humanInZone) {
                     strategy = "defensive";
                 }
+                document.getElementById('strategy').textContent = strategy;
                 
-                document.getElementById('strategy').textContent = strategy.charAt(0).toUpperCase() + strategy.slice(1);
+                let epsilon = this.epsilon;
+                if (training) epsilon = Math.max(0.1, this.epsilon);
                 
-                // Add small random noise for exploration (10% of the time)
-                if (Math.random() < 0.1) {
+                if (Math.random() < epsilon) {
                     return Math.floor(Math.random() * 5);
+                } else {
+                    const qValues = await this.getQValues(observation);
+                    return qValues.indexOf(Math.max(...qValues));
                 }
-                
-                return qValues.indexOf(Math.max(...qValues));
             }
             
-            // Train the network in background (runs slowly, doesn't affect gameplay)
             async train(observation, action, reward, nextObservation, done) {
-                // This would train the network, but we skip for smooth gameplay
-                // The AI uses pretrained logic
-                return;
+                this.memory.push({
+                    observation: observation.slice(),
+                    action: action,
+                    reward: reward,
+                    nextObservation: nextObservation.slice(),
+                    done: done
+                });
+                
+                if (this.memory.length > this.memorySize) {
+                    this.memory.shift();
+                }
+                
+                this.recentRewards.push(reward);
+                if (this.recentRewards.length > 100) this.recentRewards.shift();
+                
+                if (this.memory.length >= this.batchSize) {
+                    await this._replay();
+                }
+                
+                this.trainStep++;
+                if (this.trainStep % this.targetUpdateFreq === 0) {
+                    this._updateTargetNetwork();
+                }
+                
+                this._adaptiveEpsilonDecay();
+                this.totalSteps++;
+            }
+            
+            async _replay() {
+                const batch = [];
+                const indices = new Set();
+                while (indices.size < this.batchSize) {
+                    indices.add(Math.floor(Math.random() * this.memory.length));
+                }
+                for (const idx of indices) batch.push(this.memory[idx]);
+                
+                const currentStates = batch.map(e => e.observation);
+                const nextStates = batch.map(e => e.nextObservation);
+                
+                const currentQTensor = this.mainNetwork.predict(tf.tensor2d(currentStates, [this.batchSize, 6]));
+                const currentQValues = await currentQTensor.array();
+                const nextQTensor = this.targetNetwork.predict(tf.tensor2d(nextStates, [this.batchSize, 6]));
+                const nextQValues = await nextQTensor.array();
+                
+                const targetQValues = [];
+                for (let i = 0; i < this.batchSize; i++) {
+                    const targetQ = [...currentQValues[i]];
+                    const action = batch[i].action;
+                    const reward = batch[i].reward;
+                    const done = batch[i].done;
+                    
+                    if (done) {
+                        targetQ[action] = reward;
+                    } else {
+                        const maxNextQ = Math.max(...nextQValues[i]);
+                        targetQ[action] = reward + this.discountFactor * maxNextQ;
+                    }
+                    targetQValues.push(targetQ);
+                }
+                
+                const xs = tf.tensor2d(currentStates, [this.batchSize, 6]);
+                const ys = tf.tensor2d(targetQValues, [this.batchSize, 5]);
+                
+                const loss = await this._trainBatch(xs, ys);
+                this.lastLoss = loss;
+                
+                currentQTensor.dispose();
+                nextQTensor.dispose();
+                xs.dispose();
+                ys.dispose();
+            }
+            
+            async _trainBatch(states, targets) {
+                return new Promise((resolve) => {
+                    this.optimizer.minimize(() => {
+                        const predictions = this.mainNetwork.apply(states, { training: true });
+                        const loss = tf.losses.meanSquaredError(targets, predictions);
+                        resolve(loss.dataSync()[0]);
+                        return loss;
+                    });
+                });
+            }
+            
+            _adaptiveEpsilonDecay() {
+                if (this.recentRewards.length < 50) {
+                    this.epsilon *= this.epsilonDecay;
+                } else {
+                    const avgReward = this.recentRewards.reduce((a,b) => a + b, 0) / 50;
+                    if (avgReward > 0.3) {
+                        this.epsilon *= 0.99;
+                    } else if (avgReward < 0.1) {
+                        this.epsilon *= 0.998;
+                    } else {
+                        this.epsilon *= this.epsilonDecay;
+                    }
+                }
+                this.epsilon = Math.max(this.epsilonMin, this.epsilon);
+            }
+            
+            endEpisode(totalReward) {
+                this.trainingEpisodes++;
+                document.getElementById('train-episodes').textContent = this.trainingEpisodes;
+            }
+            
+            getMetrics() {
+                return {
+                    epsilon: this.epsilon.toFixed(3),
+                    lastLoss: this.lastLoss.toFixed(4),
+                    memorySize: this.memory.length,
+                    totalSteps: this.totalSteps,
+                    episodes: this.trainingEpisodes
+                };
+            }
+            
+            async saveModel() {
+                await this.mainNetwork.save('downloads://ai-model');
+                console.log('💾 Model saved!');
             }
         }
         
-        // Create the AI agent (no training during gameplay)
-        const aiAgent = new SmoothDQNAgent();
+        const aiAgent = new TrainableDQNAgent();
         
         // ============================================
-        // HELPER FUNCTIONS
+        // TRAINING MODE
         // ============================================
+        
+        let isTraining = false;
+        
+        async function trainAI(episodes = 100) {
+            if (isTraining) {
+                console.log('Training already in progress...');
+                return;
+            }
+            
+            isTraining = true;
+            document.getElementById('game-status').textContent = "TRAINING AI";
+            document.getElementById('game-status').className = 'status-training';
+            console.log('🧠 Starting AI Training...');
+            console.log('This will teach the AI to chase the hill!');
+            
+            for (let ep = 0; ep < episodes; ep++) {
+                // Reset for new episode
+                let tHumanPos = { x: (Math.random() - 0.5) * (arenaBounds - 6) * 2, z: (Math.random() - 0.5) * (arenaBounds - 6) * 2 };
+                let tAgentPos = { x: (Math.random() - 0.5) * (arenaBounds - 6) * 2, z: (Math.random() - 0.5) * (arenaBounds - 6) * 2 };
+                let tHillPos = getRandomPosition();
+                let tStepsSinceLastMove = 0;
+                let tCurrentInterval = 80;
+                let tMoveTimer = 8.0;
+                let tStepCount = 0;
+                let tEpisodeReward = 0;
+                
+                for (let step = 0; step < 400; step++) {
+                    tStepsSinceLastMove++;
+                    
+                    // AI decides action
+                    const obs = aiAgent._getObservation(tAgentPos, tHillPos, tStepsSinceLastMove, tCurrentInterval, false);
+                    let action;
+                    if (Math.random() < aiAgent.epsilon) {
+                        action = Math.floor(Math.random() * 5);
+                    } else {
+                        const qValues = await aiAgent.getQValues(obs);
+                        action = qValues.indexOf(Math.max(...qValues));
+                    }
+                    
+                    const moves = {
+                        0: { x: 0, z: 1 }, 1: { x: 0, z: -1 },
+                        2: { x: -1, z: 0 }, 3: { x: 1, z: 0 }, 4: { x: 0, z: 0 }
+                    };
+                    const move = moves[action];
+                    
+                    let newX = tAgentPos.x + move.x * AGENT_SPEED * 0.1;
+                    let newZ = tAgentPos.z + move.z * AGENT_SPEED * 0.1;
+                    newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
+                    newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
+                    tAgentPos = { x: newX, z: newZ };
+                    
+                    const dist = Math.hypot(tAgentPos.x - tHillPos.x, tAgentPos.z - tHillPos.z);
+                    const inZone = dist < hillRadius;
+                    let reward = inZone ? 1.0 : -0.01;
+                    
+                    tEpisodeReward += reward;
+                    
+                    // Move hill occasionally
+                    tMoveTimer -= 0.1;
+                    if (tMoveTimer <= 0) {
+                        tHillPos = getRandomPosition();
+                        tMoveTimer = 8.0;
+                        tStepsSinceLastMove = 0;
+                        if (Math.random() < 0.3) {
+                            tCurrentInterval = Math.floor(40 + Math.random() * 120);
+                        }
+                    }
+                    
+                    const nextObs = aiAgent._getObservation(tAgentPos, tHillPos, tStepsSinceLastMove, tCurrentInterval, inZone);
+                    await aiAgent.train(obs, action, reward, nextObs, false);
+                }
+                
+                aiAgent.endEpisode(tEpisodeReward);
+                
+                if ((ep + 1) % 10 === 0) {
+                    const metrics = aiAgent.getMetrics();
+                    console.log(`📊 Training Episode ${ep + 1}/${episodes} | Reward: ${tEpisodeReward.toFixed(1)} | ε: ${metrics.epsilon} | Loss: ${metrics.lastLoss}`);
+                    document.getElementById('train-progress').style.width = `${((ep + 1) / episodes) * 100}%`;
+                }
+                
+                // Small delay to let UI update
+                await new Promise(r => setTimeout(r, 5));
+            }
+            
+            isTraining = false;
+            document.getElementById('game-status').textContent = "Ready";
+            document.getElementById('game-status').className = 'status-idle';
+            console.log('✅ AI Training Complete! The AI is now smarter!');
+            console.log(`📊 Final epsilon: ${aiAgent.epsilon.toFixed(3)} | Loss: ${aiAgent.lastLoss.toFixed(4)}`);
+        }
         
         function getRandomPosition() {
             const margin = 3;
@@ -598,80 +907,31 @@
             return Math.sqrt(dx * dx + dz * dz);
         }
         
-        function updateUI() {
-            document.getElementById('human-score').textContent = Math.floor(humanScore);
-            document.getElementById('agent-score').textContent = Math.floor(agentScore);
-            document.getElementById('timer').textContent = gameTime.toFixed(1);
-            document.getElementById('move-timer').textContent = moveTimer.toFixed(1);
-            document.getElementById('interval').textContent = currentInterval;
-            document.getElementById('goal-changes').textContent = goalChanges;
-            
-            if (humanInZone) {
-                document.getElementById('human-status').innerHTML = '✅ IN ZONE! +1/sec';
-                document.getElementById('human-status').className = 'in-zone';
-            } else {
-                document.getElementById('human-status').innerHTML = '❌ Not in zone';
-                document.getElementById('human-status').className = '';
-            }
-            
-            if (agentInZone) {
-                document.getElementById('agent-status').innerHTML = '✅ IN ZONE! +1/sec';
-                document.getElementById('agent-status').className = 'in-zone';
-            } else {
-                document.getElementById('agent-status').innerHTML = '❌ Not in zone';
-                document.getElementById('agent-status').className = '';
-            }
-        }
+        // ============================================
+        // COLLISION DETECTION
+        // ============================================
         
-        function moveZone() {
-            const newPos = getRandomPosition();
-            hillPos = newPos;
-            hillGroup.position.set(hillPos.x, 0, hillPos.z);
-            hillLight.position.set(hillPos.x, 1.5, hillPos.z);
-            
-            moveTimer = 8.0;
-            stepsSinceLastMove = 0;
-            goalChanges++;
-            
-            // Visual flash effect
-            const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true });
-            const flashSphere = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), flashMat);
-            flashSphere.position.set(hillPos.x, 0.5, hillPos.z);
-            scene.add(flashSphere);
-            
-            let opacity = 0.8;
-            const flashInterval = setInterval(() => {
-                opacity -= 0.1;
-                flashSphere.material.opacity = opacity;
-                if (opacity <= 0) {
-                    scene.remove(flashSphere);
-                    clearInterval(flashInterval);
-                }
-            }, 50);
-            
-            // Adapt interval sometimes
-            if (Math.random() < 0.3) {
-                const strategies = ['faster', 'slower', 'random'];
-                const strategy = strategies[Math.floor(Math.random() * strategies.length)];
-                const oldInterval = currentInterval;
+        function handleCollisions() {
+            const dist = Math.hypot(humanPos.x - agentPos.x, humanPos.z - agentPos.z);
+            if (dist < COLLISION_RADIUS * 2) {
+                const angle = Math.atan2(agentPos.z - humanPos.z, agentPos.x - humanPos.x);
+                const pushX = Math.cos(angle) * 0.5;
+                const pushZ = Math.sin(angle) * 0.5;
                 
-                switch(strategy) {
-                    case 'faster':
-                        currentInterval = Math.max(40, currentInterval * 0.8);
-                        break;
-                    case 'slower':
-                        currentInterval = Math.min(160, currentInterval * 1.2);
-                        break;
-                    case 'random':
-                        currentInterval = Math.floor(40 + Math.random() * 120);
-                        break;
-                }
-                console.log(`🌍 Environment adapted: Interval ${oldInterval} → ${currentInterval}`);
+                humanPos.x -= pushX;
+                humanPos.z -= pushZ;
+                agentPos.x += pushX;
+                agentPos.z += pushZ;
+                
+                humanPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.x));
+                humanPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, humanPos.z));
+                agentPos.x = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.x));
+                agentPos.z = Math.max(-arenaBounds, Math.min(arenaBounds, agentPos.z));
             }
         }
         
         // ============================================
-        // MOVEMENT FUNCTIONS (SMOOTH)
+        // MOVEMENT FUNCTIONS
         // ============================================
         
         function updateHumanMovement(deltaTime) {
@@ -687,17 +947,13 @@
                 moveZ /= len;
             }
             
-            let newX = humanTargetPos.x + moveX * HUMAN_SPEED * deltaTime;
-            let newZ = humanTargetPos.z + moveZ * HUMAN_SPEED * deltaTime;
+            let newX = humanPos.x + moveX * HUMAN_SPEED * deltaTime;
+            let newZ = humanPos.z + moveZ * HUMAN_SPEED * deltaTime;
             newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
             newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-            humanTargetPos = { x: newX, z: newZ };
+            humanPos = { x: newX, z: newZ };
             
-            // Smooth interpolation for visual position
-            humanCurrentPos.x += (humanTargetPos.x - humanCurrentPos.x) * 0.3;
-            humanCurrentPos.z += (humanTargetPos.z - humanCurrentPos.z) * 0.3;
-            
-            humanGroup.position.set(humanCurrentPos.x, 0, humanCurrentPos.z);
+            humanGroup.position.set(humanPos.x, 0, humanPos.z);
             
             if (moveX !== 0 || moveZ !== 0) {
                 humanGroup.rotation.y = Math.atan2(moveX, moveZ);
@@ -705,38 +961,30 @@
             humanGroup.position.y = Math.sin(Date.now() * 0.01) * 0.03;
         }
         
-        function updateAgentMovement(deltaTime, currentTime) {
-            // Only decide new action every AI_DECISION_INTERVAL seconds
-            if (currentTime - lastAIDecisionTime >= AI_DECISION_INTERVAL) {
-                lastAIDecisionTime = currentTime;
-                currentAIAction = aiAgent.getAction(
-                    agentTargetPos, hillPos, stepsSinceLastMove, currentInterval, 
-                    agentInZone, humanInZone
+        let lastDecisionTime = 0;
+        
+        async function updateAgentMovement(deltaTime, currentTime) {
+            if (currentTime - lastDecisionTime >= 0.15) {
+                lastDecisionTime = currentTime;
+                currentAIAction = await aiAgent.getAction(
+                    agentPos, hillPos, stepsSinceLastMove, currentInterval, 
+                    agentInZone, humanInZone, false
                 );
-                aiDecisionCounter++;
             }
             
-            // Apply the chosen action smoothly
             const moves = {
-                0: { x: 0, z: 1 },
-                1: { x: 0, z: -1 },
-                2: { x: -1, z: 0 },
-                3: { x: 1, z: 0 },
-                4: { x: 0, z: 0 }
+                0: { x: 0, z: 1 }, 1: { x: 0, z: -1 },
+                2: { x: -1, z: 0 }, 3: { x: 1, z: 0 }, 4: { x: 0, z: 0 }
             };
             const move = moves[currentAIAction];
             
-            let newX = agentTargetPos.x + move.x * AGENT_SPEED * deltaTime;
-            let newZ = agentTargetPos.z + move.z * AGENT_SPEED * deltaTime;
+            let newX = agentPos.x + move.x * AGENT_SPEED * deltaTime;
+            let newZ = agentPos.z + move.z * AGENT_SPEED * deltaTime;
             newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
             newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-            agentTargetPos = { x: newX, z: newZ };
+            agentPos = { x: newX, z: newZ };
             
-            // Smooth interpolation for visual position
-            agentCurrentPos.x += (agentTargetPos.x - agentCurrentPos.x) * 0.3;
-            agentCurrentPos.z += (agentTargetPos.z - agentCurrentPos.z) * 0.3;
-            
-            agentGroup.position.set(agentCurrentPos.x, 0, agentCurrentPos.z);
+            agentGroup.position.set(agentPos.x, 0, agentPos.z);
             
             if (move.x !== 0 || move.z !== 0) {
                 agentGroup.rotation.y = Math.atan2(move.x, move.z);
@@ -752,7 +1000,7 @@
                 gameActive = false;
                 document.getElementById('game-status').textContent = "GAME OVER";
                 document.getElementById('game-status').className = 'status-idle';
-                console.log(`🏆 GAME OVER! Final Score - You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
+                console.log(`🏆 GAME OVER! Final - You: ${Math.floor(humanScore)} | AI: ${Math.floor(agentScore)}`);
                 return;
             }
             
@@ -760,43 +1008,86 @@
             stepsSinceLastMove++;
             
             if (moveTimer <= 0) {
-                moveZone();
+                hillPos = getRandomPosition();
+                hillGroup.position.set(hillPos.x, 0, hillPos.z);
+                hillLight.position.set(hillPos.x, 1.5, hillPos.z);
+                moveTimer = 8.0;
+                stepsSinceLastMove = 0;
+                goalChanges++;
+                
+                const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true });
+                const flashSphere = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), flashMat);
+                flashSphere.position.set(hillPos.x, 0.5, hillPos.z);
+                scene.add(flashSphere);
+                setTimeout(() => scene.remove(flashSphere), 200);
+                
+                if (Math.random() < 0.3) {
+                    const oldInterval = currentInterval;
+                    if (Math.random() < 0.5) {
+                        currentInterval = Math.max(40, currentInterval * 0.8);
+                    } else {
+                        currentInterval = Math.min(160, currentInterval * 1.2);
+                    }
+                    console.log(`🌍 Interval: ${oldInterval} → ${currentInterval}`);
+                }
             }
             
-            // Check zone status using actual positions
-            const humanDist = getDistance(humanTargetPos, hillPos);
-            const agentDist = getDistance(agentTargetPos, hillPos);
+            handleCollisions();
+            
+            const humanDist = Math.hypot(humanPos.x - hillPos.x, humanPos.z - hillPos.z);
+            const agentDist = Math.hypot(agentPos.x - hillPos.x, agentPos.z - hillPos.z);
             
             humanInZone = humanDist < hillRadius;
             agentInZone = agentDist < hillRadius;
             
-            // Award points
             if (humanInZone) humanScore += deltaTime;
             if (agentInZone) agentScore += deltaTime;
             
-            // Zone glow intensity
             let intensity = 0.5;
             if (humanInZone && agentInZone) intensity = 1.3;
             else if (humanInZone || agentInZone) intensity = 1.0;
             hillLight.intensity = intensity;
             hillBeacon.material.emissiveIntensity = intensity * 0.6;
             
-            updateUI();
+            document.getElementById('human-score').textContent = Math.floor(humanScore);
+            document.getElementById('agent-score').textContent = Math.floor(agentScore);
+            document.getElementById('timer').textContent = gameTime.toFixed(1);
+            document.getElementById('move-timer').textContent = moveTimer.toFixed(1);
+            document.getElementById('interval').textContent = currentInterval;
+            document.getElementById('goal-changes').textContent = goalChanges;
+            document.getElementById('game-progress').style.width = `${(gameTime / 60) * 100}%`;
+            
+            const metrics = aiAgent.getMetrics();
+            document.getElementById('epsilon').textContent = metrics.epsilon;
+            document.getElementById('loss').textContent = metrics.lastLoss;
+            document.getElementById('memory').textContent = metrics.memorySize;
+            
+            if (humanInZone) {
+                document.getElementById('human-status').innerHTML = '✅ IN ZONE!';
+                document.getElementById('human-status').className = 'in-zone';
+            } else {
+                document.getElementById('human-status').innerHTML = '❌ Not in zone';
+                document.getElementById('human-status').className = '';
+            }
+            
+            if (agentInZone) {
+                document.getElementById('agent-status').innerHTML = '✅ IN ZONE!';
+                document.getElementById('agent-status').className = 'in-zone';
+            } else {
+                document.getElementById('agent-status').innerHTML = '❌ Not in zone';
+                document.getElementById('agent-status').className = '';
+            }
             
             // Update trails
-            humanTrail.unshift({ x: humanCurrentPos.x, z: humanCurrentPos.z });
-            agentTrail.unshift({ x: agentCurrentPos.x, z: agentCurrentPos.z });
-            if (humanTrail.length > 40) humanTrail.pop();
-            if (agentTrail.length > 40) agentTrail.pop();
+            humanTrail.unshift({ x: humanPos.x, z: humanPos.z });
+            agentTrail.unshift({ x: agentPos.x, z: agentPos.z });
+            if (humanTrail.length > 30) humanTrail.pop();
+            if (agentTrail.length > 30) agentTrail.pop();
             
             const humanVertices = [];
             const agentVertices = [];
-            for (const pos of humanTrail) {
-                humanVertices.push(pos.x, 0.1, pos.z);
-            }
-            for (const pos of agentTrail) {
-                agentVertices.push(pos.x, 0.1, pos.z);
-            }
+            for (const pos of humanTrail) humanVertices.push(pos.x, 0.1, pos.z);
+            for (const pos of agentTrail) agentVertices.push(pos.x, 0.1, pos.z);
             
             const humanTrailGeo = new THREE.BufferGeometry();
             humanTrailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(humanVertices), 3));
@@ -809,22 +1100,6 @@
             scene.remove(agentTrailPoints);
             agentTrailPoints = new THREE.Points(agentTrailGeo, agentTrailMat);
             scene.add(agentTrailPoints);
-        }
-        
-        // ============================================
-        // CAMERA FOLLOWS BOTH PLAYERS
-        // ============================================
-        
-        function updateCamera() {
-            const centerX = (humanCurrentPos.x + agentCurrentPos.x) / 2;
-            const centerZ = (humanCurrentPos.z + agentCurrentPos.z) / 2;
-            const playerDist = Math.hypot(humanCurrentPos.x - agentCurrentPos.x, humanCurrentPos.z - agentCurrentPos.z);
-            const zoomLevel = Math.max(16, Math.min(26, 16 + playerDist * 0.3));
-            
-            camera.position.x += (centerX - camera.position.x) * 0.08;
-            camera.position.z += (centerZ + 4 - camera.position.z) * 0.08;
-            camera.position.y += (zoomLevel - camera.position.y) * 0.08;
-            camera.lookAt(centerX, 0, centerZ);
         }
         
         // ============================================
@@ -860,13 +1135,9 @@
             gameTime = 60.0;
             humanScore = 0;
             agentScore = 0;
-            
-            humanTargetPos = { x: -5, z: -3 };
-            agentTargetPos = { x: 5, z: 3 };
-            humanCurrentPos = { x: -5, z: -3 };
-            agentCurrentPos = { x: 5, z: 3 };
+            humanPos = { x: -5, z: -3 };
+            agentPos = { x: 5, z: 3 };
             hillPos = { x: 0, z: 0 };
-            
             moveTimer = 8.0;
             stepsSinceLastMove = 0;
             currentInterval = 80;
@@ -874,15 +1145,18 @@
             humanTrail = [];
             agentTrail = [];
             
-            humanGroup.position.set(humanCurrentPos.x, 0, humanCurrentPos.z);
-            agentGroup.position.set(agentCurrentPos.x, 0, agentCurrentPos.z);
+            humanGroup.position.set(humanPos.x, 0, humanPos.z);
+            agentGroup.position.set(agentPos.x, 0, agentPos.z);
             hillGroup.position.set(hillPos.x, 0, hillPos.z);
             hillLight.position.set(hillPos.x, 1.5, hillPos.z);
             
             document.getElementById('game-status').textContent = "PLAYING";
             document.getElementById('game-status').className = 'status-playing';
-            console.log('🎮 GAME STARTED! You are BLUE, AI is RED. Stand on the GOLDEN HILL to score!');
-            console.log('🤖 AI uses Neural Network (6→64→64→5) with smooth movement');
+            console.log('🎮 GAME STARTED! Use WASD to move BLUE robot. Stand on GOLD HILL to score!');
+        };
+        
+        document.getElementById('btn-train').onclick = async () => {
+            await trainAI(100);
         };
         
         document.getElementById('btn-reset').onclick = () => {
@@ -890,25 +1164,20 @@
             gameTime = 60.0;
             humanScore = 0;
             agentScore = 0;
-            
-            humanTargetPos = { x: -5, z: -3 };
-            agentTargetPos = { x: 5, z: 3 };
-            humanCurrentPos = { x: -5, z: -3 };
-            agentCurrentPos = { x: 5, z: 3 };
+            humanPos = { x: -5, z: -3 };
+            agentPos = { x: 5, z: 3 };
             hillPos = { x: 0, z: 0 };
-            
             humanTrail = [];
             agentTrail = [];
             
-            humanGroup.position.set(humanCurrentPos.x, 0, humanCurrentPos.z);
-            agentGroup.position.set(agentCurrentPos.x, 0, agentCurrentPos.z);
+            humanGroup.position.set(humanPos.x, 0, humanPos.z);
+            agentGroup.position.set(agentPos.x, 0, agentPos.z);
             hillGroup.position.set(hillPos.x, 0, hillPos.z);
             hillLight.position.set(hillPos.x, 1.5, hillPos.z);
             
-            updateUI();
             document.getElementById('game-status').textContent = "Ready";
             document.getElementById('game-status').className = 'status-idle';
-            console.log('🔄 Game reset. Click START GAME to play!');
+            console.log('🔄 Game reset. Train AI first or click START GAME!');
         };
         
         // ============================================
@@ -923,16 +1192,16 @@
             if (delta < 0.01) delta = 0.016;
             lastFrameTime = now;
             
-            if (gameActive) {
+            if (gameActive && !isTraining) {
                 updateHumanMovement(delta);
                 updateAgentMovement(delta, now);
                 updateGame(delta);
             }
             
-            updateCamera();
             hillRing.rotation.z += delta * 3;
             
             renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
             requestAnimationFrame(animate);
         }
         
@@ -944,18 +1213,19 @@
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            labelRenderer.setSize(width, height);
         });
         
-        console.log('🎮 TWO PLAYER - TensorFlow.js DQN (SMOOTH MOVEMENT)');
+        console.log('🎮 TWO PLAYER - TensorFlow.js DQN (FULL VERSION)');
+        console.log('================================================');
         console.log('🧑 YOU: Blue robot | Control with WASD or Arrow Keys');
         console.log('🤖 AI: Red robot | Neural Network DQN (6→64→64→5)');
-        console.log('✨ FIXES:');
-        console.log('   - AI movement is SMOOTH (no lag)');
-        console.log('   - AI decides every 0.15 seconds (not every frame)');
-        console.log('   - Smooth interpolation between positions');
-        console.log('   - No training during gameplay');
-        console.log('🏆 Stand on the GOLDEN HILL to earn points!');
-        console.log('⏱️ Game lasts 60 seconds. Click START GAME to play!');
+        console.log('📷 CAMERA: Shows ALL - You, AI, and the Hill!');
+        console.log('🚫 COLLISION: Players bounce off each other');
+        console.log('🧠 TRAINING: Click "Train AI" first to make the AI smarter!');
+        console.log('🏆 Goal: Stand on the GOLDEN HILL to earn points');
+        console.log('================================================');
     </script>
+</script>
 </body>
 </html>
