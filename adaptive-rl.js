@@ -576,3 +576,185 @@ class AdaptiveDQNAgent {
 }
 
 
+// ============================================
+// 3. TRAINING LOOP
+// ============================================
+
+class AdaptiveRLTrainer {
+    /**
+     * Coordinates training between environment and agent
+     * Tracks metrics and provides visualization data
+     */
+    constructor(env, agent) {
+        this.env = env;
+        this.agent = agent;
+        this.trainingActive = false;
+        this.currentEpisode = 0;
+        this.episodeData = [];
+        this.listeners = [];
+        
+        // Performance tracking
+        this.rewardHistory = [];
+        this.adaptationHistory = [];
+    }
+    
+    /**
+     * Add event listener for training updates
+     */
+    onUpdate(callback) {
+        this.listeners.push(callback);
+    }
+    
+    /**
+     * Notify all listeners of update
+     */
+    _notify(data) {
+        this.listeners.forEach(cb => cb(data));
+    }
+    
+    /**
+     * Train for specified number of episodes
+     */
+    async train(numEpisodes, stepsPerEpisode = 500) {
+        this.trainingActive = true;
+        
+        for (let ep = 0; ep < numEpisodes && this.trainingActive; ep++) {
+            const episodeResult = await this._runEpisode(stepsPerEpisode);
+            this.rewardHistory.push(episodeResult);
+            
+            // Notify listeners for real-time updates
+            this._notify({
+                type: 'episode_complete',
+                episode: this.currentEpisode,
+                reward: episodeResult.totalReward,
+                metrics: this.env.getMetrics(),
+                agentMetrics: this.agent.getMetrics(),
+                adaptationTime: episodeResult.adaptationTime
+            });
+            
+            // Small delay to prevent UI freezing
+            await this._sleep(10);
+        }
+        
+        this.trainingActive = false;
+        return this.rewardHistory;
+    }
+    
+    /**
+     * Run a single episode
+     */
+    async _runEpisode(maxSteps) {
+        let observation = this.env.reset();
+        let done = false;
+        let step = 0;
+        let totalReward = 0;
+        let adaptationTimes = [];
+        
+        while (!done && step < maxSteps) {
+            // Get action from agent
+            const action = this.agent.act(observation, { goalMoved: false });
+            
+            // Take step in environment
+            const result = this.env.step(action);
+            
+            // Train agent
+            this.agent.train(
+                observation, 
+                action, 
+                result.reward, 
+                result.observation, 
+                result.done,
+                { goalMoved: result.info.goalMoved }
+            );
+            
+            totalReward += result.reward;
+            
+            // Track adaptation when goal moves
+            if (result.info.goalMoved) {
+                adaptationTimes.push(result.info.stepsRemaining);
+            }
+            
+            // Send step update for visualization
+            this._notify({
+                type: 'step',
+                episode: this.currentEpisode + 1,
+                step: step,
+                observation: result.observation,
+                reward: result.reward,
+                inZone: result.info.inZone,
+                distance: result.info.distance,
+                goalMoved: result.info.goalMoved,
+                totalReward: totalReward,
+                agentMetrics: this.agent.getMetrics(),
+                envMetrics: this.env.getMetrics()
+            });
+            
+            observation = result.observation;
+            done = result.done;
+            step++;
+        }
+        
+        this.agent.endEpisode(totalReward);
+        this.currentEpisode++;
+        
+        const avgAdaptation = adaptationTimes.length > 0
+            ? adaptationTimes.reduce((a,b) => a + b, 0) / adaptationTimes.length
+            : null;
+        
+        return {
+            episode: this.currentEpisode,
+            totalReward: totalReward,
+            steps: step,
+            adaptationTime: avgAdaptation,
+            goalChanges: this.env.goalChanges.length
+        };
+    }
+    
+    /**
+     * Stop training
+     */
+    stop() {
+        this.trainingActive = false;
+    }
+    
+    /**
+     * Sleep helper
+     */
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    /**
+     * Get summary statistics
+     */
+    getSummary() {
+        const avgReward = this.rewardHistory.reduce((a,b) => a + b.totalReward, 0) / this.rewardHistory.length;
+        const bestReward = Math.max(...this.rewardHistory.map(r => r.totalReward));
+        
+        return {
+            episodesCompleted: this.currentEpisode,
+            averageReward: avgReward,
+            bestReward: bestReward,
+            finalEpsilon: this.agent.epsilon,
+            finalQTableSize: this.agent.qTable.size
+        };
+    }
+}
+
+
+// ============================================
+// 4. EXPORT FOR USE IN HTML
+// ============================================
+
+// Make available globally
+window.AdaptiveRL = {
+    Environment: AdaptiveHillEnvironment,
+    Agent: AdaptiveDQNAgent,
+    Trainer: AdaptiveRLTrainer
+};
+
+console.log('Adaptive RL Module Loaded!');
+console.log('Available classes:');
+console.log('  - AdaptiveRL.Environment');
+console.log('  - AdaptiveRL.Agent');
+console.log('  - AdaptiveRL.Trainer');
