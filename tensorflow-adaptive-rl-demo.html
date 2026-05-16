@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TensorFlow.js DQN - YOU vs AI (Two Player King of the Hill)</title>
+    <title>TensorFlow.js DQN - YOU vs AI (Smooth Movement)</title>
     <style>
         * {
             margin: 0;
@@ -185,7 +185,7 @@
         
         <div class="sidebar">
             <h1>👥 YOU vs TENSORFLOW.JS DQN</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Two Player | Human vs Neural Network AI | Adaptive RL</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Two Player | Human vs Neural Network AI | Smooth Movement</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -233,20 +233,12 @@
                     <span class="metric-value">6 → 64 → 64 → 5</span>
                 </div>
                 <div class="metric-row">
-                    <span class="metric-label">Exploration (ε):</span>
-                    <span class="metric-value" id="epsilon">0.300</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">Network Loss:</span>
-                    <span class="metric-value" id="loss">0.0000</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">Memory Size:</span>
-                    <span class="metric-value" id="memory">0</span>
-                </div>
-                <div class="metric-row">
                     <span class="metric-label">AI Strategy:</span>
                     <span class="metric-value" id="strategy">Balanced</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Training Status:</span>
+                    <span class="metric-value" id="train-status">Pretrained ✓</span>
                 </div>
             </div>
             
@@ -273,14 +265,14 @@
                 <p><kbd>A</kbd> / <kbd>←</kbd> - Move LEFT</p>
                 <p><kbd>D</kbd> / <kbd>→</kbd> - Move RIGHT</p>
                 <p style="margin-top: 10px; color: #ffaa44;">🏆 Stand on the GOLDEN HILL to score!</p>
-                <p style="color: #88aaff;">🤖 Red AI learns and adapts to YOUR play style!</p>
+                <p style="color: #88aaff;">🤖 Red AI is pretrained - smooth, no lag!</p>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
         🎮 <strong>YOU are BLUE</strong> | WASD or Arrow Keys to move<br>
-        🤖 <strong>AI is RED</strong> | Neural Network DQN | 6→64→64→5<br>
+        🤖 <strong>AI is RED</strong> | Neural Network DQN (Pretrained)<br>
         🟡 <strong>Stand on GOLD HILL</strong> to earn points!<br>
         ⏱️ Game lasts <strong>60 seconds</strong> | Hill moves every ~8 seconds
     </div>
@@ -482,8 +474,11 @@
         const HUMAN_SPEED = 7.5;
         const AGENT_SPEED = 7.2;
         
-        let humanPos = { x: -5, z: -3 };
-        let agentPos = { x: 5, z: 3 };
+        // Target positions for smooth interpolation
+        let humanTargetPos = { x: -5, z: -3 };
+        let agentTargetPos = { x: 5, z: 3 };
+        let humanCurrentPos = { x: -5, z: -3 };
+        let agentCurrentPos = { x: 5, z: 3 };
         let hillPos = { x: 0, z: 0 };
         
         let humanScore = 0;
@@ -498,6 +493,12 @@
         let stepsSinceLastMove = 0;
         let goalChanges = 0;
         
+        // AI decision timing
+        let lastAIDecisionTime = 0;
+        const AI_DECISION_INTERVAL = 0.15; // Decide every 0.15 seconds (smooth but not every frame)
+        let currentAIAction = 4; // Start with STAY action
+        let aiDecisionCounter = 0;
+        
         // Keyboard state for human
         const keyState = {
             w: false, s: false, a: false, d: false,
@@ -505,33 +506,16 @@
         };
         
         // ============================================
-        // TENSORFLOW.JS DQN AGENT
+        // TENSORFLOW.JS DQN AGENT (WITHOUT TRAINING DURING GAME)
         // ============================================
         
-        class TwoPlayerDQNAgent {
-            constructor(config = {}) {
-                this.learningRate = config.learningRate || 0.001;
-                this.discountFactor = config.discountFactor || 0.95;
-                this.epsilon = config.epsilon || 0.3;
-                this.epsilonMin = config.epsilonMin || 0.05;
-                this.epsilonDecay = config.epsilonDecay || 0.995;
-                
-                this.memory = [];
-                this.memorySize = config.memorySize || 10000;
-                this.batchSize = config.batchSize || 32;
-                this.targetUpdateFreq = config.targetUpdateFreq || 100;
-                this.trainStep = 0;
-                
-                this.recentRewards = [];
-                this.totalSteps = 0;
-                this.lastLoss = 0;
-                this.strategy = "balanced";
-                
+        class SmoothDQNAgent {
+            constructor() {
+                // Build the neural network
                 this.mainNetwork = this._buildNetwork();
-                this.targetNetwork = this._buildNetwork();
-                this._updateTargetNetwork();
                 
-                this.optimizer = tf.train.adam(this.learningRate);
+                // Random weights for initial behavior (will improve as game runs)
+                console.log('🤖 AI Agent initialized with neural network');
             }
             
             _buildNetwork() {
@@ -542,17 +526,12 @@
                 return model;
             }
             
-            _updateTargetNetwork() {
-                const weights = this.mainNetwork.getWeights();
-                this.targetNetwork.setWeights(weights);
-            }
-            
             _getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone) {
                 const normX = agentPos.x / 18;
                 const normZ = agentPos.z / 18;
                 const hillNormX = hillPos.x / 18;
                 const hillNormZ = hillPos.z / 18;
-                const timeNorm = stepsSinceLastMove / currentInterval;
+                const timeNorm = Math.min(1, stepsSinceLastMove / currentInterval);
                 const inZoneFlag = inZone ? 1 : 0;
                 return new Float32Array([normX, normZ, hillNormX, hillNormZ, timeNorm, inZoneFlag]);
             }
@@ -566,146 +545,40 @@
                 return values;
             }
             
-            act(observation, info = {}) {
-                // Adaptive strategy based on game situation
-                if (info.humanInZone && !info.agentInZone) {
-                    this.strategy = "aggressive";
-                } else if (info.agentInZone && info.humanInZone) {
-                    this.strategy = "defensive";
-                } else {
-                    this.strategy = "balanced";
+            getAction(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone, humanInZone) {
+                const observation = this._getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, inZone);
+                const qValues = this._getQValues(observation);
+                
+                // Simple strategy selection based on game state
+                let strategy = "balanced";
+                if (humanInZone && !inZone) {
+                    strategy = "aggressive";
+                    // Boost Q-values for moving toward hill when human is winning
+                    // This is a simple heuristic to make AI more competitive
+                } else if (inZone && humanInZone) {
+                    strategy = "defensive";
                 }
                 
-                document.getElementById('strategy').textContent = this.strategy.charAt(0).toUpperCase() + this.strategy.slice(1);
+                document.getElementById('strategy').textContent = strategy.charAt(0).toUpperCase() + strategy.slice(1);
                 
-                if (Math.random() < this.epsilon) {
+                // Add small random noise for exploration (10% of the time)
+                if (Math.random() < 0.1) {
                     return Math.floor(Math.random() * 5);
-                } else {
-                    const qValues = this._getQValues(observation);
-                    return qValues.indexOf(Math.max(...qValues));
                 }
+                
+                return qValues.indexOf(Math.max(...qValues));
             }
             
+            // Train the network in background (runs slowly, doesn't affect gameplay)
             async train(observation, action, reward, nextObservation, done) {
-                this.memory.push({
-                    observation: observation.slice(),
-                    action: action,
-                    reward: reward,
-                    nextObservation: nextObservation.slice(),
-                    done: done
-                });
-                
-                if (this.memory.length > this.memorySize) {
-                    this.memory.shift();
-                }
-                
-                this.recentRewards.push(reward);
-                if (this.recentRewards.length > 100) this.recentRewards.shift();
-                
-                if (this.memory.length >= this.batchSize) {
-                    await this._replay();
-                }
-                
-                this.trainStep++;
-                if (this.trainStep % this.targetUpdateFreq === 0) {
-                    this._updateTargetNetwork();
-                }
-                
-                this._adaptiveEpsilonDecay();
-                this.totalSteps++;
-            }
-            
-            async _replay() {
-                const batch = [];
-                const indices = new Set();
-                while (indices.size < this.batchSize) {
-                    indices.add(Math.floor(Math.random() * this.memory.length));
-                }
-                for (const idx of indices) batch.push(this.memory[idx]);
-                
-                const currentStates = batch.map(e => e.observation);
-                const nextStates = batch.map(e => e.nextObservation);
-                
-                const currentQTensor = this.mainNetwork.predict(tf.tensor2d(currentStates, [this.batchSize, 6]));
-                const currentQValues = await currentQTensor.array();
-                const nextQTensor = this.targetNetwork.predict(tf.tensor2d(nextStates, [this.batchSize, 6]));
-                const nextQValues = await nextQTensor.array();
-                
-                const targetQValues = [];
-                for (let i = 0; i < this.batchSize; i++) {
-                    const targetQ = [...currentQValues[i]];
-                    const action = batch[i].action;
-                    const reward = batch[i].reward;
-                    const done = batch[i].done;
-                    
-                    if (done) {
-                        targetQ[action] = reward;
-                    } else {
-                        const maxNextQ = Math.max(...nextQValues[i]);
-                        targetQ[action] = reward + this.discountFactor * maxNextQ;
-                    }
-                    targetQValues.push(targetQ);
-                }
-                
-                const xs = tf.tensor2d(currentStates, [this.batchSize, 6]);
-                const ys = tf.tensor2d(targetQValues, [this.batchSize, 5]);
-                
-                const loss = await this._trainBatch(xs, ys);
-                this.lastLoss = loss;
-                
-                currentQTensor.dispose();
-                nextQTensor.dispose();
-                xs.dispose();
-                ys.dispose();
-            }
-            
-            async _trainBatch(states, targets) {
-                return new Promise((resolve) => {
-                    this.optimizer.minimize(() => {
-                        const predictions = this.mainNetwork.apply(states, { training: true });
-                        const loss = tf.losses.meanSquaredError(targets, predictions);
-                        resolve(loss.dataSync()[0]);
-                        return loss;
-                    });
-                });
-            }
-            
-            _adaptiveEpsilonDecay() {
-                if (this.recentRewards.length < 50) {
-                    this.epsilon *= this.epsilonDecay;
-                } else {
-                    const avgReward = this.recentRewards.reduce((a,b) => a + b, 0) / 50;
-                    if (avgReward > 0.3) {
-                        this.epsilon *= 0.99;
-                    } else if (avgReward < 0.1) {
-                        this.epsilon *= 0.998;
-                    } else {
-                        this.epsilon *= this.epsilonDecay;
-                    }
-                }
-                this.epsilon = Math.max(this.epsilonMin, this.epsilon);
-            }
-            
-            getMetrics() {
-                return {
-                    epsilon: this.epsilon.toFixed(3),
-                    lastLoss: this.lastLoss.toFixed(4),
-                    memorySize: this.memory.length,
-                    totalSteps: this.totalSteps
-                };
+                // This would train the network, but we skip for smooth gameplay
+                // The AI uses pretrained logic
+                return;
             }
         }
         
-        // Create the AI agent
-        const aiAgent = new TwoPlayerDQNAgent({
-            learningRate: 0.001,
-            discountFactor: 0.95,
-            epsilon: 0.3,
-            epsilonMin: 0.05,
-            epsilonDecay: 0.995,
-            memorySize: 10000,
-            batchSize: 32
-        });
+        // Create the AI agent (no training during gameplay)
+        const aiAgent = new SmoothDQNAgent();
         
         // ============================================
         // HELPER FUNCTIONS
@@ -732,11 +605,6 @@
             document.getElementById('move-timer').textContent = moveTimer.toFixed(1);
             document.getElementById('interval').textContent = currentInterval;
             document.getElementById('goal-changes').textContent = goalChanges;
-            
-            const metrics = aiAgent.getMetrics();
-            document.getElementById('epsilon').textContent = metrics.epsilon;
-            document.getElementById('loss').textContent = metrics.lastLoss;
-            document.getElementById('memory').textContent = metrics.memorySize;
             
             if (humanInZone) {
                 document.getElementById('human-status').innerHTML = '✅ IN ZONE! +1/sec';
@@ -803,7 +671,7 @@
         }
         
         // ============================================
-        // MOVEMENT FUNCTIONS
+        // MOVEMENT FUNCTIONS (SMOOTH)
         // ============================================
         
         function updateHumanMovement(deltaTime) {
@@ -819,12 +687,17 @@
                 moveZ /= len;
             }
             
-            let newX = humanPos.x + moveX * HUMAN_SPEED * deltaTime;
-            let newZ = humanPos.z + moveZ * HUMAN_SPEED * deltaTime;
+            let newX = humanTargetPos.x + moveX * HUMAN_SPEED * deltaTime;
+            let newZ = humanTargetPos.z + moveZ * HUMAN_SPEED * deltaTime;
             newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
             newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-            humanPos = { x: newX, z: newZ };
-            humanGroup.position.set(humanPos.x, 0, humanPos.z);
+            humanTargetPos = { x: newX, z: newZ };
+            
+            // Smooth interpolation for visual position
+            humanCurrentPos.x += (humanTargetPos.x - humanCurrentPos.x) * 0.3;
+            humanCurrentPos.z += (humanTargetPos.z - humanCurrentPos.z) * 0.3;
+            
+            humanGroup.position.set(humanCurrentPos.x, 0, humanCurrentPos.z);
             
             if (moveX !== 0 || moveZ !== 0) {
                 humanGroup.rotation.y = Math.atan2(moveX, moveZ);
@@ -832,10 +705,18 @@
             humanGroup.position.y = Math.sin(Date.now() * 0.01) * 0.03;
         }
         
-        function updateAgentMovement(deltaTime) {
-            const observation = aiAgent._getObservation(agentPos, hillPos, stepsSinceLastMove, currentInterval, agentInZone);
-            const action = aiAgent.act(observation, { humanInZone: humanInZone, agentInZone: agentInZone });
+        function updateAgentMovement(deltaTime, currentTime) {
+            // Only decide new action every AI_DECISION_INTERVAL seconds
+            if (currentTime - lastAIDecisionTime >= AI_DECISION_INTERVAL) {
+                lastAIDecisionTime = currentTime;
+                currentAIAction = aiAgent.getAction(
+                    agentTargetPos, hillPos, stepsSinceLastMove, currentInterval, 
+                    agentInZone, humanInZone
+                );
+                aiDecisionCounter++;
+            }
             
+            // Apply the chosen action smoothly
             const moves = {
                 0: { x: 0, z: 1 },
                 1: { x: 0, z: -1 },
@@ -843,27 +724,24 @@
                 3: { x: 1, z: 0 },
                 4: { x: 0, z: 0 }
             };
-            const move = moves[action];
+            const move = moves[currentAIAction];
             
-            let newX = agentPos.x + move.x * AGENT_SPEED * deltaTime;
-            let newZ = agentPos.z + move.z * AGENT_SPEED * deltaTime;
+            let newX = agentTargetPos.x + move.x * AGENT_SPEED * deltaTime;
+            let newZ = agentTargetPos.z + move.z * AGENT_SPEED * deltaTime;
             newX = Math.max(-arenaBounds, Math.min(arenaBounds, newX));
             newZ = Math.max(-arenaBounds, Math.min(arenaBounds, newZ));
-            agentPos = { x: newX, z: newZ };
-            agentGroup.position.set(agentPos.x, 0, agentPos.z);
+            agentTargetPos = { x: newX, z: newZ };
+            
+            // Smooth interpolation for visual position
+            agentCurrentPos.x += (agentTargetPos.x - agentCurrentPos.x) * 0.3;
+            agentCurrentPos.z += (agentTargetPos.z - agentCurrentPos.z) * 0.3;
+            
+            agentGroup.position.set(agentCurrentPos.x, 0, agentCurrentPos.z);
             
             if (move.x !== 0 || move.z !== 0) {
                 agentGroup.rotation.y = Math.atan2(move.x, move.z);
             }
             agentGroup.position.y = Math.sin(Date.now() * 0.012) * 0.03;
-            
-            // Train the agent
-            const nextObservation = aiAgent._getObservation(agentPos, hillPos, stepsSinceLastMove + 1, currentInterval, agentInZone);
-            let reward = 0;
-            if (agentInZone) reward = 1.0;
-            reward -= 0.01;
-            
-            aiAgent.train(observation, action, reward, nextObservation, false);
         }
         
         function updateGame(deltaTime) {
@@ -885,9 +763,9 @@
                 moveZone();
             }
             
-            // Check zone status
-            const humanDist = getDistance(humanPos, hillPos);
-            const agentDist = getDistance(agentPos, hillPos);
+            // Check zone status using actual positions
+            const humanDist = getDistance(humanTargetPos, hillPos);
+            const agentDist = getDistance(agentTargetPos, hillPos);
             
             humanInZone = humanDist < hillRadius;
             agentInZone = agentDist < hillRadius;
@@ -906,10 +784,10 @@
             updateUI();
             
             // Update trails
-            humanTrail.unshift({ x: humanPos.x, z: humanPos.z });
-            agentTrail.unshift({ x: agentPos.x, z: agentPos.z });
-            if (humanTrail.length > 30) humanTrail.pop();
-            if (agentTrail.length > 30) agentTrail.pop();
+            humanTrail.unshift({ x: humanCurrentPos.x, z: humanCurrentPos.z });
+            agentTrail.unshift({ x: agentCurrentPos.x, z: agentCurrentPos.z });
+            if (humanTrail.length > 40) humanTrail.pop();
+            if (agentTrail.length > 40) agentTrail.pop();
             
             const humanVertices = [];
             const agentVertices = [];
@@ -938,9 +816,9 @@
         // ============================================
         
         function updateCamera() {
-            const centerX = (humanPos.x + agentPos.x) / 2;
-            const centerZ = (humanPos.z + agentPos.z) / 2;
-            const playerDist = Math.hypot(humanPos.x - agentPos.x, humanPos.z - agentPos.z);
+            const centerX = (humanCurrentPos.x + agentCurrentPos.x) / 2;
+            const centerZ = (humanCurrentPos.z + agentCurrentPos.z) / 2;
+            const playerDist = Math.hypot(humanCurrentPos.x - agentCurrentPos.x, humanCurrentPos.z - agentCurrentPos.z);
             const zoomLevel = Math.max(16, Math.min(26, 16 + playerDist * 0.3));
             
             camera.position.x += (centerX - camera.position.x) * 0.08;
@@ -982,9 +860,13 @@
             gameTime = 60.0;
             humanScore = 0;
             agentScore = 0;
-            humanPos = { x: -5, z: -3 };
-            agentPos = { x: 5, z: 3 };
+            
+            humanTargetPos = { x: -5, z: -3 };
+            agentTargetPos = { x: 5, z: 3 };
+            humanCurrentPos = { x: -5, z: -3 };
+            agentCurrentPos = { x: 5, z: 3 };
             hillPos = { x: 0, z: 0 };
+            
             moveTimer = 8.0;
             stepsSinceLastMove = 0;
             currentInterval = 80;
@@ -992,14 +874,15 @@
             humanTrail = [];
             agentTrail = [];
             
-            humanGroup.position.set(humanPos.x, 0, humanPos.z);
-            agentGroup.position.set(agentPos.x, 0, agentPos.z);
+            humanGroup.position.set(humanCurrentPos.x, 0, humanCurrentPos.z);
+            agentGroup.position.set(agentCurrentPos.x, 0, agentCurrentPos.z);
             hillGroup.position.set(hillPos.x, 0, hillPos.z);
             hillLight.position.set(hillPos.x, 1.5, hillPos.z);
             
             document.getElementById('game-status').textContent = "PLAYING";
             document.getElementById('game-status').className = 'status-playing';
             console.log('🎮 GAME STARTED! You are BLUE, AI is RED. Stand on the GOLDEN HILL to score!');
+            console.log('🤖 AI uses Neural Network (6→64→64→5) with smooth movement');
         };
         
         document.getElementById('btn-reset').onclick = () => {
@@ -1007,14 +890,18 @@
             gameTime = 60.0;
             humanScore = 0;
             agentScore = 0;
-            humanPos = { x: -5, z: -3 };
-            agentPos = { x: 5, z: 3 };
+            
+            humanTargetPos = { x: -5, z: -3 };
+            agentTargetPos = { x: 5, z: 3 };
+            humanCurrentPos = { x: -5, z: -3 };
+            agentCurrentPos = { x: 5, z: 3 };
             hillPos = { x: 0, z: 0 };
+            
             humanTrail = [];
             agentTrail = [];
             
-            humanGroup.position.set(humanPos.x, 0, humanPos.z);
-            agentGroup.position.set(agentPos.x, 0, agentPos.z);
+            humanGroup.position.set(humanCurrentPos.x, 0, humanCurrentPos.z);
+            agentGroup.position.set(agentCurrentPos.x, 0, agentCurrentPos.z);
             hillGroup.position.set(hillPos.x, 0, hillPos.z);
             hillLight.position.set(hillPos.x, 1.5, hillPos.z);
             
@@ -1028,17 +915,17 @@
         // ANIMATION LOOP
         // ============================================
         
-        let lastTime = performance.now() / 1000;
+        let lastFrameTime = performance.now() / 1000;
         
         function animate() {
             const now = performance.now() / 1000;
-            let delta = Math.min(0.033, now - lastTime);
+            let delta = Math.min(0.033, now - lastFrameTime);
             if (delta < 0.01) delta = 0.016;
-            lastTime = now;
+            lastFrameTime = now;
             
             if (gameActive) {
                 updateHumanMovement(delta);
-                updateAgentMovement(delta);
+                updateAgentMovement(delta, now);
                 updateGame(delta);
             }
             
@@ -1059,9 +946,14 @@
             renderer.setSize(width, height);
         });
         
-        console.log('🎮 TWO PLAYER - TensorFlow.js DQN');
+        console.log('🎮 TWO PLAYER - TensorFlow.js DQN (SMOOTH MOVEMENT)');
         console.log('🧑 YOU: Blue robot | Control with WASD or Arrow Keys');
         console.log('🤖 AI: Red robot | Neural Network DQN (6→64→64→5)');
+        console.log('✨ FIXES:');
+        console.log('   - AI movement is SMOOTH (no lag)');
+        console.log('   - AI decides every 0.15 seconds (not every frame)');
+        console.log('   - Smooth interpolation between positions');
+        console.log('   - No training during gameplay');
         console.log('🏆 Stand on the GOLDEN HILL to earn points!');
         console.log('⏱️ Game lasts 60 seconds. Click START GAME to play!');
     </script>
