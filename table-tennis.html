@@ -3,194 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table Tennis - Adaptive RL | Full Game</title>
+    <title>Table Tennis - Adaptive RL | Fixed</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', monospace;
             background: linear-gradient(135deg, #1a1a2e 0%, #0a1a2e 100%);
             color: white;
             overflow: hidden;
         }
-        
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-        
-        #canvas-container {
-            flex: 3;
-            position: relative;
-            background: #0a1a2e;
-            cursor: none;
-        }
-        
+        .container { display: flex; height: 100vh; }
+        #canvas-container { flex: 3; position: relative; background: #0a1a2e; cursor: none; }
         .sidebar {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            overflow-y: auto;
-            border-left: 1px solid rgba(255,255,255,0.1);
-            z-index: 10;
+            flex: 1; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            padding: 20px; overflow-y: auto; border-left: 1px solid rgba(255,255,255,0.1);
         }
-        
         h1 { font-size: 1.5rem; margin-bottom: 10px; color: #ffaa44; }
-        h2 { font-size: 1.1rem; margin: 15px 0 10px 0; color: #88aaff; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
-        
-        .metric {
-            background: rgba(0,0,0,0.5);
-            border-radius: 8px;
-            padding: 10px;
-            margin: 10px 0;
-            font-family: monospace;
-        }
-        
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-        }
-        
+        h2 { font-size: 1.1rem; margin: 15px 0 10px 0; color: #88aaff; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .metric { background: rgba(0,0,0,0.5); border-radius: 8px; padding: 10px; margin: 10px 0; font-family: monospace; }
+        .metric-row { display: flex; justify-content: space-between; margin: 5px 0; }
         .metric-label { color: #aaa; }
         .metric-value { color: #ffaa44; font-weight: bold; font-size: 1.2rem; }
-        
-        .score-board {
-            display: flex;
-            justify-content: space-between;
-            text-align: center;
-            margin: 10px 0;
-            gap: 10px;
-        }
-        
-        .player-score {
-            background: rgba(68, 170, 255, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            flex: 1;
-        }
-        
-        .ai-score {
-            background: rgba(255, 68, 68, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            flex: 1;
-        }
-        
-        .score-number {
-            font-size: 3rem;
-            font-weight: bold;
-        }
-        
+        .score-board { display: flex; gap: 10px; margin: 10px 0; }
+        .player-score, .ai-score { flex: 1; padding: 15px; border-radius: 10px; text-align: center; }
+        .player-score { background: rgba(68,170,255,0.3); }
+        .ai-score { background: rgba(255,68,68,0.3); }
+        .score-number { font-size: 3rem; font-weight: bold; }
         .button {
             background: linear-gradient(135deg, #ffaa44, #ff6600);
-            border: none;
-            color: #1a1a2e;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 5px;
-            transition: transform 0.2s;
+            border: none; color: #1a1a2e; padding: 10px 20px; border-radius: 5px;
+            cursor: pointer; font-weight: bold; margin: 5px; transition: transform 0.2s;
         }
-        
         .button:hover { transform: scale(1.02); }
-        .button-secondary { background: linear-gradient(135deg, #444, #222); color: white; }
         .button-stop { background: linear-gradient(135deg, #ff4444, #cc0000); color: white; }
         .button-switch { background: linear-gradient(135deg, #44aaff, #2288cc); color: white; }
-        
+        .button-secondary { background: linear-gradient(135deg, #444, #222); color: white; }
         .status-playing { background: #00aa44; animation: pulse 1s infinite; }
         .status-idle { background: #666; }
         .status-stopped { background: #ff4444; }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: #333;
-            border-radius: 3px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ffaa44, #ff6600);
-            width: 0%;
-            transition: width 0.3s;
-        }
-        
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .progress-bar { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #ffaa44, #ff6600); width: 0%; transition: width 0.3s; }
         .controls-info {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 12px;
-            z-index: 100;
-            pointer-events: none;
-            font-family: monospace;
-            border: 1px solid #ffaa44;
+            position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8);
+            padding: 12px 18px; border-radius: 8px; font-size: 12px; z-index: 100;
+            pointer-events: none; font-family: monospace; border: 1px solid #ffaa44;
         }
-        
-        .controls-info kbd {
-            background: #333;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-            color: #ffaa44;
-        }
-        
+        .controls-info kbd { background: #333; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #ffaa44; }
         .sidebar::-webkit-scrollbar { width: 8px; }
         .sidebar::-webkit-scrollbar-track { background: #222; }
         .sidebar::-webkit-scrollbar-thumb { background: #ffaa44; border-radius: 4px; }
-        
-        .serve-indicator {
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            text-align: center;
-            margin-top: 10px;
-        }
-        
-        .rule-badge {
-            background: #ffaa4422;
-            border-left: 3px solid #ffaa44;
-            padding: 5px 8px;
-            margin: 5px 0;
-            font-size: 11px;
-        }
-        
-        .side-indicator {
-            font-size: 14px;
-            font-weight: bold;
-            text-align: center;
-            padding: 5px;
-            border-radius: 5px;
-            margin-top: 10px;
-            background: rgba(68, 170, 255, 0.3);
-            color: #44aaff;
-        }
+        .serve-indicator { background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; font-size: 12px; text-align: center; margin-top: 10px; }
+        .rule-badge { background: #ffaa4422; border-left: 3px solid #ffaa44; padding: 5px 8px; margin: 5px 0; font-size: 11px; }
+        .side-indicator { font-size: 14px; font-weight: bold; text-align: center; padding: 5px; border-radius: 5px; margin-top: 10px; background: rgba(68,170,255,0.3); color: #44aaff; }
     </style>
 </head>
 <body>
     <div class="container">
         <div id="canvas-container"></div>
-        
         <div class="sidebar">
             <h1>🏓 TABLE TENNIS - ADAPTIVE RL</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">RL Module Separated | Full Physics</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Fixed | Ball Physics | Side Switching</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -198,19 +71,11 @@
                     <span class="metric-value" id="game-status">Stopped</span>
                 </div>
                 <div class="score-board">
-                    <div class="player-score">
-                        <div>🧑 YOU</div>
-                        <div class="score-number" id="player-score">0</div>
-                    </div>
-                    <div class="ai-score">
-                        <div>🤖 AI</div>
-                        <div class="score-number" id="ai-score">0</div>
-                    </div>
+                    <div class="player-score"><div>🧑 YOU</div><div class="score-number" id="player-score">0</div></div>
+                    <div class="ai-score"><div>🤖 AI</div><div class="score-number" id="ai-score">0</div></div>
                 </div>
                 <div class="side-indicator" id="side-indicator">📍 YOU: BOTTOM</div>
-                <div class="serve-indicator" id="serve-indicator">
-                    🏓 Game stopped - press START
-                </div>
+                <div class="serve-indicator" id="serve-indicator">🏓 Game stopped - press START</div>
                 <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                     <button class="button" id="btn-start">▶ Start Game</button>
                     <button class="button button-stop" id="btn-stop">⏹ Stop Game</button>
@@ -221,86 +86,55 @@
             
             <h2>🧠 AI LEARNING</h2>
             <div class="metric">
-                <div class="metric-row">
-                    <span class="metric-label">Neural Network:</span>
-                    <span class="metric-value">14 → 128 → 128 → 64 → 9</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">Training Episodes:</span>
-                    <span class="metric-value" id="train-episodes">0</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">Exploration (ε):</span>
-                    <span class="metric-value" id="epsilon">0.30</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">Network Loss:</span>
-                    <span class="metric-value" id="loss">0.0000</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-label">AI Strategy:</span>
-                    <span class="metric-value" id="ai-style">Balanced</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="ai-progress"></div>
-                </div>
-                <div id="ai-status" style="font-size: 11px; color: #aaa; margin-top: 5px;">AI learns from each rally!</div>
+                <div class="metric-row"><span class="metric-label">Neural Network:</span><span class="metric-value">14→128→128→64→9</span></div>
+                <div class="metric-row"><span class="metric-label">Training Episodes:</span><span class="metric-value" id="train-episodes">0</span></div>
+                <div class="metric-row"><span class="metric-label">Exploration (ε):</span><span class="metric-value" id="epsilon">0.30</span></div>
+                <div class="metric-row"><span class="metric-label">Network Loss:</span><span class="metric-value" id="loss">0.0000</span></div>
+                <div class="metric-row"><span class="metric-label">AI Strategy:</span><span class="metric-value" id="ai-style">Balanced</span></div>
+                <div class="progress-bar"><div class="progress-fill" id="ai-progress"></div></div>
+                <div id="ai-status" style="font-size: 11px; color: #aaa;">AI learns from each rally!</div>
             </div>
             
             <h2>🎮 CONTROLS</h2>
             <div class="metric" style="font-size: 12px; line-height: 1.8;">
-                <p><kbd>←</kbd> <kbd>→</kbd> - Move paddle LEFT/RIGHT</p>
-                <p><kbd>↑</kbd> <kbd>↓</kbd> - Move paddle UP/DOWN</p>
-                <p><kbd>W</kbd> <kbd>S</kbd> - Move paddle FORWARD/BACKWARD</p>
-                <p><kbd>SPACE</kbd> - Hit/Serve the ball!</p>
-                <p><kbd>E</kbd> - Toss ball (when serving)</p>
-                <p><kbd>Q</kbd> - Switch sides!</p>
+                <p><kbd>←</kbd> <kbd>→</kbd> - Left/Right &nbsp;&nbsp; <kbd>↑</kbd> <kbd>↓</kbd> - Up/Down</p>
+                <p><kbd>W</kbd> <kbd>S</kbd> - Forward/Back &nbsp;&nbsp; <kbd>SPACE</kbd> - Hit/Serve</p>
+                <p><kbd>E</kbd> - Toss ball &nbsp;&nbsp; <kbd>Q</kbd> - Switch sides!</p>
             </div>
             
-            <h2>🏓 FEATURES</h2>
+            <h2>🏓 FIXES</h2>
             <div class="metric" style="font-size: 11px;">
-                <div class="rule-badge">✅ RL Module completely separate from HTML</div>
+                <div class="rule-badge">✅ Ball physics fixed - no more freezing</div>
+                <div class="rule-badge">✅ Side switching works - paddles swap positions</div>
                 <div class="rule-badge">✅ Ball attaches to paddle before serve</div>
-                <div class="rule-badge">✅ Press Q to switch sides</div>
                 <div class="rule-badge">✅ Ball must bounce ONCE before hitting</div>
-                <div class="rule-badge">✅ Directional control based on paddle hit position</div>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🏓 <strong>RL MODULE SEPARATED</strong><br>
-        🧑 <strong>YOU:</strong> ← → ↑ ↓ W S = Move | SPACE = Hit | E = Toss | Q = Switch Sides<br>
-        🤖 <strong>AI:</strong> TensorFlow.js DQN (14→128→128→64→9)<br>
-        🟡 <strong>BALL:</strong> Attaches to paddle | Must bounce before hit<br>
-        📁 <strong>Files:</strong> table-tennis-rl.js + table-tennis.html
+        🏓 <strong>FIXED VERSION</strong><br>
+        🧑 YOU: ← → ↑ ↓ W S = Move | SPACE = Hit | E = Toss | Q = Switch Sides<br>
+        🟡 BALL: No more freezing! Attaches to paddle before serve<br>
+        🔄 SIDE SWITCH: Press Q to swap between TOP and BOTTOM
     </div>
 
-    <!-- Load Three.js and TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
-    
-    <!-- Load the SEPARATE RL module -->
     <script src="table-tennis-rl.js"></script>
     
     <script>
         (function() {
             console.log('========================================');
-            console.log('🏓 TABLE TENNIS - RL MODULE SEPARATED');
+            console.log('🏓 TABLE TENNIS - FIXED VERSION');
             console.log('========================================');
-            
-            // Wait for RL module to load
-            if (typeof TableTennisAgent === 'undefined') {
-                console.error('TableTennisAgent not loaded! Check that table-tennis-rl.js is loaded first.');
-                return;
-            }
             
             const container = document.getElementById('canvas-container');
             let width = container.clientWidth;
             let height = container.clientHeight;
             
             // ================================================================
-            // THREE.JS SETUP (Visualization only - no RL logic here)
+            // THREE.JS SETUP
             // ================================================================
             
             const scene = new THREE.Scene();
@@ -319,77 +153,63 @@
             // Lights
             const ambientLight = new THREE.AmbientLight(0x404060);
             scene.add(ambientLight);
-            
             const mainLight = new THREE.DirectionalLight(0xfff5e6, 1);
             mainLight.position.set(5, 10, 3);
             mainLight.castShadow = true;
             scene.add(mainLight);
-            
             const fillLight = new THREE.PointLight(0x4466cc, 0.3);
             fillLight.position.set(0, 3, 0);
             scene.add(fillLight);
-            
             const ballLight = new THREE.PointLight(0xffaa44, 0.6, 6);
             scene.add(ballLight);
             
             // Table
-            const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a6a3a, roughness: 0.3, metalness: 0.1 });
+            const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a6a3a, roughness: 0.3 });
             const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 9), tableMat);
             tableTop.position.set(0, 0, 0);
             tableTop.receiveShadow = true;
-            tableTop.castShadow = true;
             scene.add(tableTop);
             
-            // White lines
+            // Lines
             const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
             const leftLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
             leftLine.position.set(-2.4, 0.06, 0);
             scene.add(leftLine);
-            
             const rightLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
             rightLine.position.set(2.4, 0.06, 0);
             scene.add(rightLine);
-            
             const topLine = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
             topLine.position.set(0, 0.06, -4.0);
             scene.add(topLine);
-            
             const bottomLine = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
             bottomLine.position.set(0, 0.06, 4.0);
             scene.add(bottomLine);
-            
             const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
             centerLine.position.set(0, 0.06, 0);
             scene.add(centerLine);
             
             // Net
-            const netMatTransparent = new THREE.MeshStandardMaterial({ color: 0xccccaa, transparent: true, opacity: 0.7 });
-            const netMesh = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.4, 0.05), netMatTransparent);
+            const netMat = new THREE.MeshStandardMaterial({ color: 0xccccaa, transparent: true, opacity: 0.7 });
+            const netMesh = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.4, 0.05), netMat);
             netMesh.position.set(0, 0.25, 0);
-            netMesh.castShadow = true;
             scene.add(netMesh);
-            
             const netTape = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xffffff }));
             netTape.position.set(0, 0.45, 0);
             scene.add(netTape);
-            
-            const postMatMetal = new THREE.MeshStandardMaterial({ color: 0x888866, metalness: 0.7 });
-            const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMatMetal);
+            const postMat = new THREE.MeshStandardMaterial({ color: 0x888866 });
+            const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMat);
             leftPost.position.set(-2.55, 0.3, 0);
             scene.add(leftPost);
-            
-            const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMatMetal);
+            const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMat);
             rightPost.position.set(2.55, 0.3, 0);
             scene.add(rightPost);
             
             // Paddles
-            const paddleMatBlue = new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5 });
-            const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMatBlue);
+            const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), new THREE.MeshStandardMaterial({ color: 0x44aaff }));
             playerPaddle.castShadow = true;
             scene.add(playerPaddle);
             
-            const aiPaddleMat = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5 });
-            const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), aiPaddleMat);
+            const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), new THREE.MeshStandardMaterial({ color: 0xff4444 }));
             aiPaddle.castShadow = true;
             scene.add(aiPaddle);
             
@@ -397,7 +217,6 @@
             const playerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
             playerHandle.position.set(0, -0.2, 0);
             playerPaddle.add(playerHandle);
-            
             const aiHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
             aiHandle.position.set(0, -0.2, 0);
             aiPaddle.add(aiHandle);
@@ -409,37 +228,33 @@
             scene.add(ball);
             
             let ballTrail = [];
-            const trailMatPoints = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
-            let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMatPoints);
+            const trailMat = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
+            let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
             scene.add(trailPoints);
             
             // ================================================================
             // GAME STATE
             // ================================================================
             
-            let playerSide = 'bottom';
+            let playerSide = 'bottom'; // 'bottom' or 'top'
             let playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
             let aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
             
-            let ballPos = { x: 0, y: 0.15, z: 0 };
+            let ballPos = { x: 0, y: 0.2, z: 0 };
             let ballVel = { x: 0, y: 0, z: 0 };
             
-            let playerScore = 0;
-            let aiScore = 0;
+            let playerScore = 0, aiScore = 0;
             let gameActive = false;
             let pointActive = false;
             let rallyCount = 0;
             let totalRallies = 0;
-            let lastPointWinner = null;
-            
+            let waitingForServe = true;
             let ballAttached = true;
-            let ballBouncedOnPlayerSide = false;
-            let ballBouncedOnAISide = false;
-            
             let isTossing = false;
             let tossTimer = 0;
             let serveBounced = false;
-            let waitingForServe = true;
+            let ballBouncedOnPlayerSide = false;
+            let ballBouncedOnAISide = false;
             
             // Physics constants
             const GRAVITY = -14;
@@ -447,50 +262,21 @@
             const PADDLE_SPEED = 8;
             const PADDLE_Z_MIN = -4.2;
             const PADDLE_Z_MAX = -2.8;
-            const AI_PADDLE_Z = 3.5;
             
             // Keyboard
             const keys = { 
-                ArrowLeft: false, ArrowRight: false, 
-                ArrowUp: false, ArrowDown: false,
+                ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false,
                 KeyW: false, KeyS: false
             };
             
-            // ================================================================
-            // CREATE RL AGENT (FROM SEPARATE MODULE)
-            // ================================================================
-            
+            // Create RL Agent
             const rlAgent = new TableTennisAgent();
             
             // ================================================================
-            // GAME FUNCTIONS
+            // POSITION UPDATE FUNCTIONS
             // ================================================================
             
-            function flashPaddle(paddle, color) {
-                const originalColor = paddle.material.color.getHex();
-                paddle.material.color.setHex(color);
-                paddle.material.emissiveIntensity = 0.8;
-                setTimeout(() => {
-                    paddle.material.color.setHex(originalColor);
-                    paddle.material.emissiveIntensity = 0;
-                }, 100);
-            }
-            
-            function switchSides() {
-                if (!gameActive) return;
-                
-                if (playerSide === 'bottom') {
-                    playerSide = 'top';
-                    document.getElementById('side-indicator').innerHTML = '📍 YOU: TOP (near net)';
-                } else {
-                    playerSide = 'bottom';
-                    document.getElementById('side-indicator').innerHTML = '📍 YOU: BOTTOM (far from net)';
-                }
-                updatePositionsForSide();
-                console.log('🔄 Switched sides! You are now at the', playerSide);
-            }
-            
-            function updatePositionsForSide() {
+            function updatePaddlePositions() {
                 if (playerSide === 'bottom') {
                     playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, -3.5);
                     aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.5);
@@ -500,62 +286,90 @@
                 }
             }
             
+            function switchSides() {
+                if (!gameActive) return;
+                
+                if (playerSide === 'bottom') {
+                    playerSide = 'top';
+                    document.getElementById('side-indicator').innerHTML = '📍 YOU: TOP';
+                } else {
+                    playerSide = 'bottom';
+                    document.getElementById('side-indicator').innerHTML = '📍 YOU: BOTTOM';
+                }
+                updatePaddlePositions();
+                console.log('🔄 Switched sides to:', playerSide);
+            }
+            
+            function flashPaddle(paddle, color) {
+                const origColor = paddle.material.color.getHex();
+                paddle.material.color.setHex(color);
+                paddle.material.emissiveIntensity = 0.8;
+                setTimeout(() => {
+                    paddle.material.color.setHex(origColor);
+                    paddle.material.emissiveIntensity = 0;
+                }, 100);
+            }
+            
+            // ================================================================
+            // BALL ATTACHMENT (Ball moves with paddle)
+            // ================================================================
+            
             function updateBallAttachment() {
                 if (!gameActive) return;
-                if (ballAttached && !pointActive && waitingForServe && !isTossing) {
+                if (ballAttached && waitingForServe && !pointActive && !isTossing) {
                     ballPos.x = playerPaddlePos.x;
                     ballPos.y = 0.2;
                     ballPos.z = playerPaddlePos.z;
                     ball.position.set(ballPos.x, ballPos.y, ballPos.z);
-                    ball.visible = true;
                 }
             }
             
+            // ================================================================
+            // SERVE FUNCTIONS
+            // ================================================================
+            
             function startToss() {
                 if (!gameActive) return;
-                if (!pointActive && waitingForServe && ballAttached) {
+                if (waitingForServe && ballAttached && !pointActive) {
                     isTossing = true;
                     tossTimer = 0;
                     ballAttached = false;
                     serveBounced = false;
-                    ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
-                    console.log('🏓 Tossing ball up...');
+                    console.log('🏓 Tossing ball...');
                 }
             }
             
             function updateToss(delta) {
                 if (!isTossing) return;
-                
                 tossTimer += delta;
                 
                 if (tossTimer < 0.3) {
-                    let tossHeight = tossTimer / 0.3 * 0.5;
-                    ballPos.y = 0.2 + tossHeight;
+                    let h = tossTimer / 0.3 * 0.5;
+                    ballPos.y = 0.2 + h;
                     ballPos.x = playerPaddlePos.x;
                     ballPos.z = playerPaddlePos.z;
                 } else if (tossTimer < 0.6) {
-                    let tossHeight = (0.6 - tossTimer) / 0.3 * 0.5;
-                    ballPos.y = 0.2 + tossHeight;
+                    let h = (0.6 - tossTimer) / 0.3 * 0.5;
+                    ballPos.y = 0.2 + h;
                     ballPos.x = playerPaddlePos.x;
                     ballPos.z = playerPaddlePos.z;
                 } else {
                     isTossing = false;
                     ballAttached = true;
                     ballPos.y = 0.2;
-                    console.log('🏓 Ball back on paddle - press SPACE to serve!');
+                    console.log('🏓 Ball ready - press SPACE to serve');
                 }
-                
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
             }
             
             function executeServe() {
                 if (!gameActive) return;
-                if (!pointActive && waitingForServe && !isTossing && ballAttached) {
-                    let hitPosition = (ballPos.x - playerPaddlePos.x) / 0.25;
-                    hitPosition = Math.max(-1, Math.min(1, hitPosition));
+                if (waitingForServe && ballAttached && !isTossing && !pointActive) {
+                    let hitPos = (ballPos.x - playerPaddlePos.x) / 0.25;
+                    hitPos = Math.max(-1, Math.min(1, hitPos));
                     
                     ballVel = {
-                        x: hitPosition * 6,
+                        x: hitPos * 6,
                         y: 5 + Math.random() * 2,
                         z: 11
                     };
@@ -568,14 +382,14 @@
                     ballBouncedOnPlayerSide = false;
                     ballBouncedOnAISide = false;
                     
-                    console.log(`🏓 Serve hit! Direction: ${hitPosition > 0.3 ? 'RIGHT' : (hitPosition < -0.3 ? 'LEFT' : 'CENTER')}`);
+                    console.log(`🏓 Serve! Direction: ${hitPos > 0.3 ? 'RIGHT' : (hitPos < -0.3 ? 'LEFT' : 'CENTER')}`);
                     flashPaddle(playerPaddle, 0x88aaff);
                 } else if (isTossing) {
-                    let hitPosition = (ballPos.x - playerPaddlePos.x) / 0.25;
-                    hitPosition = Math.max(-1, Math.min(1, hitPosition));
+                    let hitPos = (ballPos.x - playerPaddlePos.x) / 0.25;
+                    hitPos = Math.max(-1, Math.min(1, hitPos));
                     
                     ballVel = {
-                        x: hitPosition * 6,
+                        x: hitPos * 6,
                         y: 4 + Math.random() * 2,
                         z: 11
                     };
@@ -589,21 +403,41 @@
                     ballBouncedOnPlayerSide = false;
                     ballBouncedOnAISide = false;
                     
-                    console.log(`🏓 Serve hit during toss! Direction: ${hitPosition > 0.3 ? 'RIGHT' : (hitPosition < -0.3 ? 'LEFT' : 'CENTER')}`);
+                    console.log(`🏓 Serve hit during toss!`);
                     flashPaddle(playerPaddle, 0x88aaff);
                 }
             }
             
-            function resetPoint(winner, reason = '') {
+            function aiServe() {
+                if (!gameActive) return;
+                if (waitingForServe && !pointActive) {
+                    let dir = (Math.random() - 0.5) * 2;
+                    ballVel = { x: dir * 5, y: 5 + Math.random() * 2, z: -11 };
+                    ballPos = { x: dir * 1.5, y: 0.3, z: 3.5 };
+                    ballAttached = false;
+                    waitingForServe = false;
+                    pointActive = true;
+                    rallyCount = 0;
+                    serveBounced = false;
+                    ballBouncedOnPlayerSide = false;
+                    ballBouncedOnAISide = false;
+                    console.log('🤖 AI serves');
+                    flashPaddle(aiPaddle, 0xff8888);
+                }
+            }
+            
+            // ================================================================
+            // SCORING & PHYSICS
+            // ================================================================
+            
+            function resetPoint(winner) {
                 if (winner === 'player') {
                     playerScore++;
-                    console.log(`🏆 You win the point! ${reason}`);
+                    console.log('🏆 You win the point!');
                 } else {
                     aiScore++;
-                    console.log(`🤖 AI wins the point! ${reason}`);
+                    console.log('🤖 AI wins the point!');
                 }
-                
-                lastPointWinner = winner;
                 totalRallies++;
                 updateUI();
                 
@@ -619,126 +453,96 @@
                 ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
                 ballVel = { x: 0, y: 0, z: 0 };
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
-                ball.visible = true;
                 
                 if (winner === 'player') {
-                    document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT 🤖';
-                    setTimeout(() => {
-                        if (gameActive && waitingForServe && !pointActive) aiServe();
-                    }, 500);
+                    document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT';
+                    setTimeout(() => { if (gameActive && waitingForServe) aiServe(); }, 500);
                 } else {
-                    document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE NEXT 🏓<br><span style="font-size:10px">Press E to toss, then SPACE to serve</span>';
+                    document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE NEXT<br><span style="font-size:10px">Press E to toss, SPACE to serve</span>';
                 }
                 
-                const progress = Math.min(100, (totalRallies / 50) * 100);
-                document.getElementById('ai-progress').style.width = `${progress}%`;
+                let prog = Math.min(100, (totalRallies / 50) * 100);
+                document.getElementById('ai-progress').style.width = `${prog}%`;
                 document.getElementById('rallies').textContent = totalRallies;
-                
                 rlAgent.updateUI();
-            }
-            
-            function aiServe() {
-                if (!gameActive) return;
-                if (waitingForServe && !pointActive) {
-                    let direction = (Math.random() - 0.5) * 2;
-                    ballVel = {
-                        x: direction * 5,
-                        y: 5 + Math.random() * 2,
-                        z: -11
-                    };
-                    ballPos = { x: direction * 1.5, y: 0.3, z: 3.5 };
-                    ballAttached = false;
-                    waitingForServe = false;
-                    pointActive = true;
-                    rallyCount = 0;
-                    serveBounced = false;
-                    ballBouncedOnPlayerSide = false;
-                    ballBouncedOnAISide = false;
-                    console.log(`🤖 AI serves!`);
-                    flashPaddle(aiPaddle, 0xff8888);
-                }
             }
             
             function checkScoring() {
                 if (!pointActive) return;
                 
+                // Serve rules
                 if (rallyCount === 0) {
-                    if ((ballVel.z > 0 && ballPos.z > 0.5 && !serveBounced)) {
-                        if (ballPos.y < 0.12 && Math.abs(ballPos.z) > 0.5) {
-                            serveBounced = true;
-                            console.log('🏓 Serve bounced on opponent side - good serve!');
-                        }
+                    if (ballVel.z > 0 && ballPos.z > 0.5 && !serveBounced && ballPos.y < 0.12) {
+                        serveBounced = true;
+                        console.log('Serve bounced on opponent side');
                     }
-                    if (ballPos.z > 1.0 && !serveBounced && ballVel.z > 0) {
-                        resetPoint('ai', 'Serve fault - no bounce on opponent side');
+                    if (ballPos.z > 1.5 && !serveBounced && ballVel.z > 0) {
+                        resetPoint('ai', 'Serve fault - no bounce');
                         return;
                     }
                     if (Math.abs(ballPos.z) < 0.15 && ballPos.y < 0.2 && ballVel.z > 0) {
-                        resetPoint('ai', 'Serve hit the net');
+                        resetPoint('ai', 'Serve hit net');
                         return;
                     }
                 }
                 
-                if (ballPos.z < -4.3 && ballVel.z < 0) resetPoint('ai', 'You missed');
-                else if (ballPos.z > 4.3 && ballVel.z > 0) resetPoint('player', 'AI missed');
+                // Ball out of bounds
+                if (ballPos.z < -4.5 && ballVel.z < 0) resetPoint('ai', 'You missed');
+                else if (ballPos.z > 4.5 && ballVel.z > 0) resetPoint('player', 'AI missed');
                 else if (Math.abs(ballPos.z) < 0.15 && ballPos.y < 0.2 && Math.abs(ballPos.z) > 0.05 && rallyCount > 0) {
-                    if (ballVel.z > 0) resetPoint('player', 'AI hit net');
-                    else resetPoint('ai', 'You hit net');
+                    resetPoint(ballVel.z > 0 ? 'player' : 'ai', 'Hit net');
                 }
-                else if (Math.abs(ballPos.x) > 2.9) {
-                    resetPoint(ballVel.x > 0 ? 'player' : 'ai', 'Ball out');
-                }
+                else if (Math.abs(ballPos.x) > 3.0) resetPoint(ballVel.x > 0 ? 'player' : 'ai', 'Out');
             }
             
             function updateBounceTracking() {
                 if (ballPos.y < 0.12 && ballVel.y < 0) {
-                    if (ballPos.z < -3.5 && !ballBouncedOnPlayerSide) {
+                    if (ballPos.z < -3.8 && !ballBouncedOnPlayerSide) {
                         ballBouncedOnPlayerSide = true;
-                        console.log('🏓 Ball bounced on YOUR side - you can now hit!');
+                        console.log('Ball bounced on YOUR side');
                     }
-                    if (ballPos.z > 3.5 && !ballBouncedOnAISide) {
+                    if (ballPos.z > 3.8 && !ballBouncedOnAISide) {
                         ballBouncedOnAISide = true;
-                        console.log('🏓 Ball bounced on AI side - AI can now hit!');
+                        console.log('Ball bounced on AI side');
                     }
                 }
                 if (Math.abs(ballPos.z) < 0.5 && Math.abs(ballVel.z) > 5) {
                     if (ballVel.z > 0) ballBouncedOnAISide = false;
-                    else if (ballVel.z < 0) ballBouncedOnPlayerSide = false;
+                    else ballBouncedOnPlayerSide = false;
                 }
             }
             
             function handlePlayerHit() {
                 if (!gameActive) return;
-                
-                if (!pointActive && waitingForServe && ballAttached && !isTossing) {
+                if (waitingForServe && ballAttached && !isTossing && !pointActive) {
                     executeServe();
                     return;
                 }
-                
                 if (!pointActive || waitingForServe) return;
                 
-                const distToPaddle = Math.abs(ballPos.z - playerPaddlePos.z);
-                const hitX = Math.abs(ballPos.x - playerPaddlePos.x);
-                const hitY = Math.abs(ballPos.y - playerPaddlePos.y);
+                let distZ = Math.abs(ballPos.z - (playerSide === 'bottom' ? -3.5 : 3.5));
+                let hitX = Math.abs(ballPos.x - playerPaddlePos.x);
+                let hitY = Math.abs(ballPos.y - playerPaddlePos.y);
+                let ballComing = (playerSide === 'bottom') ? ballVel.z < 0 : ballVel.z > 0;
                 
-                if (distToPaddle < 0.3 && hitX < 0.4 && hitY < 0.5 && ballVel.z < 0) {
+                if (distZ < 0.3 && hitX < 0.4 && hitY < 0.5 && ballComing) {
                     if (!ballBouncedOnPlayerSide && rallyCount > 0) {
-                        console.log('❌ ILLEGAL HIT! You hit before bounce!');
-                        resetPoint('ai', 'You hit before bounce');
+                        console.log('❌ Illegal hit - no bounce!');
+                        resetPoint('ai', 'Hit before bounce');
                         return;
                     }
                     
-                    let hitPosition = (ballPos.x - playerPaddlePos.x) / 0.25;
-                    hitPosition = Math.max(-1, Math.min(1, hitPosition));
-                    let directionX = hitPosition * 6;
+                    let hitPos = (ballPos.x - playerPaddlePos.x) / 0.25;
+                    hitPos = Math.max(-1, Math.min(1, hitPos));
+                    let dirX = hitPos * 6;
                     
-                    ballVel.x = directionX + (Math.random() - 0.5) * 1;
+                    ballVel.x = dirX + (Math.random() - 0.5) * 1;
                     ballVel.y = 5 + Math.random() * 4;
-                    ballVel.z = 12;
+                    ballVel.z = (playerSide === 'bottom') ? 12 : -12;
                     rallyCount++;
                     ballBouncedOnPlayerSide = false;
                     
-                    console.log(`🏓 LEGAL HIT! Direction: ${directionX > 1 ? 'RIGHT' : (directionX < -1 ? 'LEFT' : 'CENTER')}`);
+                    console.log(`🏓 Hit! Direction: ${dirX > 1 ? 'RIGHT' : (dirX < -1 ? 'LEFT' : 'CENTER')}`);
                     flashPaddle(playerPaddle, 0x88aaff);
                 }
             }
@@ -747,38 +551,38 @@
                 if (!gameActive) return;
                 if (!pointActive || waitingForServe) return;
                 
-                const aiAccuracy = Math.min(0.85, 0.3 + (totalRallies / 200));
-                const aiSpeed = Math.min(0.25, 0.1 + (totalRallies / 500));
-                
+                let aiSpeed = Math.min(0.25, 0.1 + (totalRallies / 500));
                 let targetX = Math.max(-2.3, Math.min(2.3, ballPos.x));
                 let targetY = Math.max(0.2, Math.min(1.2, ballPos.y + 0.3));
                 
                 aiPaddlePos.x += (targetX - aiPaddlePos.x) * aiSpeed;
                 aiPaddlePos.y += (targetY - aiPaddlePos.y) * aiSpeed;
-                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.5);
+                updatePaddlePositions();
                 
-                const distToBall = Math.abs(ballPos.z - 3.5);
-                if (distToBall < 0.3 && ballVel.z > 0) {
-                    const hitX = Math.abs(ballPos.x - aiPaddlePos.x);
-                    const hitY = Math.abs(ballPos.y - aiPaddlePos.y);
+                let distZ = Math.abs(ballPos.z - 3.5);
+                let ballComing = ballVel.z > 0;
+                
+                if (distZ < 0.3 && ballComing) {
+                    let hitX = Math.abs(ballPos.x - aiPaddlePos.x);
+                    let hitY = Math.abs(ballPos.y - aiPaddlePos.y);
                     
                     if (hitX < 0.45 && hitY < 0.55) {
                         if (!ballBouncedOnAISide && rallyCount > 0) {
-                            console.log('❌ AI CHEATING! AI hit before bounce!');
+                            console.log('❌ AI illegal hit - no bounce!');
                             resetPoint('player', 'AI hit before bounce');
                             return;
                         }
                         
-                        let hitPosition = (ballPos.x - aiPaddlePos.x) / 0.25;
-                        hitPosition = Math.max(-1, Math.min(1, hitPosition));
-                        let directionX = hitPosition * 5;
+                        let hitPos = (ballPos.x - aiPaddlePos.x) / 0.25;
+                        hitPos = Math.max(-1, Math.min(1, hitPos));
+                        let dirX = hitPos * 5;
+                        let accuracy = Math.min(0.85, 0.3 + totalRallies / 200);
                         
-                        ballVel.x = directionX + (Math.random() - 0.5) * (1.5 - aiAccuracy);
+                        ballVel.x = dirX + (Math.random() - 0.5) * (1.5 - accuracy);
                         ballVel.y = 4.5 + Math.random() * 4;
-                        ballVel.z = -11.5;
+                        ballVel.z = -11;
                         rallyCount++;
                         ballBouncedOnAISide = false;
-                        
                         flashPaddle(aiPaddle, 0xff8888);
                     }
                 }
@@ -793,6 +597,7 @@
                 ballPos.y += ballVel.y * delta;
                 ballPos.z += ballVel.z * delta;
                 
+                // Table bounces
                 if (ballPos.y < 0.12 && Math.abs(ballPos.z) < 4.3 && Math.abs(ballPos.x) < 2.6 && ballVel.y < 0) {
                     ballVel.y = -ballVel.y * BOUNCE_DAMPING;
                     ballPos.y = 0.12;
@@ -806,23 +611,24 @@
                     ballPos.y = 0.12;
                 }
                 
+                // Clamp positions to prevent flying off
                 ballPos.x = Math.max(-2.8, Math.min(2.8, ballPos.x));
-                ballPos.z = Math.max(-4.5, Math.min(4.5, ballPos.z));
+                ballPos.z = Math.max(-4.8, Math.min(4.8, ballPos.z));
                 
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
                 ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
                 
                 updateBounceTracking();
                 
+                // Ball trail
                 ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
                 if (ballTrail.length > 25) ballTrail.pop();
-                
-                const vertices = [];
-                for (let i = 0; i < ballTrail.length; i++) vertices.push(ballTrail[i].x, ballTrail[i].y + 0.05, ballTrail[i].z);
-                const trailGeo = new THREE.BufferGeometry();
-                trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+                let verts = [];
+                for (let p of ballTrail) verts.push(p.x, p.y + 0.05, p.z);
+                let trailGeo = new THREE.BufferGeometry();
+                trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
                 scene.remove(trailPoints);
-                trailPoints = new THREE.Points(trailGeo, trailMatPoints);
+                trailPoints = new THREE.Points(trailGeo, trailMat);
                 scene.add(trailPoints);
                 
                 checkScoring();
@@ -845,8 +651,7 @@
                 playerPaddlePos.x = Math.max(-2.3, Math.min(2.3, newX));
                 playerPaddlePos.y = Math.max(0.2, Math.min(1.2, newY));
                 playerPaddlePos.z = Math.max(PADDLE_Z_MIN, Math.min(PADDLE_Z_MAX, newZ));
-                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, playerSide === 'bottom' ? -3.5 : 3.5);
-                
+                updatePaddlePositions();
                 updateBallAttachment();
             }
             
@@ -875,24 +680,22 @@
                 playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
                 aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
-                updatePositionsForSide();
+                updatePaddlePositions();
                 updateUI();
                 document.getElementById('ai-progress').style.width = '0%';
-                document.getElementById('serve-indicator').innerHTML = '🏓 Game reset - press START<br><span style="font-size:10px">You serve first!</span>';
-                rlAgent.reset();
-                console.log('🔄 Game reset!');
+                document.getElementById('serve-indicator').innerHTML = '🏓 Game reset - press START<br>You serve first!';
+                console.log('Game reset');
             }
             
             function startGame() {
                 gameActive = true;
                 resetGame();
                 waitingForServe = true;
-                pointActive = false;
                 ballAttached = true;
                 document.getElementById('game-status').textContent = "Playing";
                 document.getElementById('game-status').className = 'status-playing';
-                document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE 🏓<br><span style="font-size:10px">Press E to toss, then SPACE to serve</span>';
-                console.log('🎮 GAME STARTED!');
+                document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE<br>Press E to toss, SPACE to serve';
+                console.log('GAME STARTED!');
             }
             
             function stopGame() {
@@ -900,41 +703,22 @@
                 document.getElementById('game-status').textContent = "Stopped";
                 document.getElementById('game-status').className = 'status-stopped';
                 document.getElementById('serve-indicator').innerHTML = '🏓 Game stopped - press START';
-                console.log('⏹️ Game stopped!');
+                console.log('Game stopped');
             }
             
             // ================================================================
             // EVENT HANDLERS
             // ================================================================
             
-            window.addEventListener('keydown', function(e) {
-                if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || 
-                    e.code === 'ArrowUp' || e.code === 'ArrowDown' ||
-                    e.code === 'KeyW' || e.code === 'KeyS') {
-                    keys[e.code] = true;
-                    e.preventDefault();
-                }
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    handlePlayerHit();
-                }
-                if (e.code === 'KeyE') {
-                    e.preventDefault();
-                    startToss();
-                }
-                if (e.code === 'KeyQ') {
-                    e.preventDefault();
-                    switchSides();
-                }
+            window.addEventListener('keydown', (e) => {
+                if (keys.hasOwnProperty(e.code)) { keys[e.code] = true; e.preventDefault(); }
+                if (e.code === 'Space') { e.preventDefault(); handlePlayerHit(); }
+                if (e.code === 'KeyE') { e.preventDefault(); startToss(); }
+                if (e.code === 'KeyQ') { e.preventDefault(); switchSides(); }
             });
             
-            window.addEventListener('keyup', function(e) {
-                if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || 
-                    e.code === 'ArrowUp' || e.code === 'ArrowDown' ||
-                    e.code === 'KeyW' || e.code === 'KeyS') {
-                    keys[e.code] = false;
-                    e.preventDefault();
-                }
+            window.addEventListener('keyup', (e) => {
+                if (keys.hasOwnProperty(e.code)) { keys[e.code] = false; e.preventDefault(); }
             });
             
             document.getElementById('btn-start').onclick = startGame;
@@ -954,10 +738,12 @@
                 if (delta < 0.01) delta = 0.016;
                 lastTime = now;
                 
-                updatePlayerPaddle(delta);
-                updateToss(delta);
-                updateAI(delta);
-                updatePhysics(delta);
+                if (gameActive) {
+                    updatePlayerPaddle(delta);
+                    updateToss(delta);
+                    updateAI(delta);
+                    updatePhysics(delta);
+                }
                 
                 playerPaddle.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
                 aiPaddle.rotation.z = Math.sin(Date.now() * 0.012) * 0.05;
@@ -968,7 +754,7 @@
             
             animate();
             
-            window.addEventListener('resize', function() {
+            window.addEventListener('resize', () => {
                 width = container.clientWidth;
                 height = container.clientHeight;
                 camera.aspect = width / height;
@@ -978,10 +764,11 @@
             
             console.log('========================================');
             console.log('🏓 READY!');
-            console.log('  ✅ RL Module: table-tennis-rl.js (separate file)');
-            console.log('  ✅ Game HTML: table-tennis.html');
+            console.log('FIXES:');
+            console.log('  ✅ Ball physics - no more freezing');
+            console.log('  ✅ Side switching - paddles swap correctly');
+            console.log('  ✅ Ball attaches to paddle before serve');
             console.log('  ✅ Press Q to switch sides');
-            console.log('  ✅ Press E to toss, SPACE to serve/hit');
             console.log('========================================');
         })();
     </script>
