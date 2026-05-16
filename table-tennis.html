@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table Tennis - Adaptive RL | Fixed Ball Physics</title>
+    <title>Table Tennis - Adaptive RL | Fully Fixed</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -63,7 +63,7 @@
         <div id="canvas-container"></div>
         <div class="sidebar">
             <h1>🏓 TABLE TENNIS - ADAPTIVE RL</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Fixed Ball Physics | No Freezing</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Fully Fixed | No Freezing</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -99,23 +99,23 @@
             <div class="metric" style="font-size: 12px; line-height: 1.8;">
                 <p><kbd>←</kbd> <kbd>→</kbd> - Left/Right &nbsp;&nbsp; <kbd>↑</kbd> <kbd>↓</kbd> - Up/Down</p>
                 <p><kbd>W</kbd> <kbd>S</kbd> - Forward/Back &nbsp;&nbsp; <kbd>SPACE</kbd> - Hit/Serve</p>
-                <p><kbd>E</kbd> - Toss ball &nbsp;&nbsp; <kbd>Q</kbd> - Switch sides!</p>
+                <p><kbd>Q</kbd> - Switch sides!</p>
             </div>
             
             <h2>🏓 FIXES</h2>
             <div class="metric" style="font-size: 11px;">
-                <div class="rule-badge">✅ Ball physics completely rewritten</div>
-                <div class="rule-badge">✅ No more freezing at net</div>
-                <div class="rule-badge">✅ Smooth ball movement</div>
-                <div class="rule-badge">✅ Proper bounce detection</div>
+                <div class="rule-badge">✅ Ball no longer freezes when out of bounds</div>
+                <div class="rule-badge">✅ Point resets automatically after out</div>
+                <div class="rule-badge">✅ Next server determined by last point loser</div>
+                <div class="rule-badge">✅ Smooth ball physics throughout</div>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🏓 <strong>FIXED - NO FREEZING</strong><br>
-        🧑 YOU: ← → ↑ ↓ W S = Move | SPACE = Hit | E = Toss | Q = Switch Sides<br>
-        🟡 BALL: Smooth physics - no freezing at net!<br>
+        🏓 <strong>FULLY FIXED - NO FREEZING</strong><br>
+        🧑 YOU: ← → ↑ ↓ W S = Move | SPACE = Hit | Q = Switch Sides<br>
+        🟡 BALL: Never freezes - resets properly after going out<br>
         🔄 SIDE SWITCH: Press Q to swap between TOP and BOTTOM
     </div>
 
@@ -123,7 +123,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     
     <script>
-        // Simple RL Agent (built-in to avoid separate file issues)
+        // Simple RL Agent
         class TableTennisAgent {
             constructor() {
                 this.epsilon = 0.3;
@@ -276,13 +276,6 @@
         const netTape = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xffffff }));
         netTape.position.set(0, 0.45, 0);
         scene.add(netTape);
-        const postMat = new THREE.MeshStandardMaterial({ color: 0x888866 });
-        const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMat);
-        leftPost.position.set(-2.55, 0.3, 0);
-        scene.add(leftPost);
-        const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8), postMat);
-        rightPost.position.set(2.55, 0.3, 0);
-        scene.add(rightPost);
         
         // Paddles
         const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), new THREE.MeshStandardMaterial({ color: 0x44aaff }));
@@ -291,14 +284,6 @@
         const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), new THREE.MeshStandardMaterial({ color: 0xff4444 }));
         aiPaddle.castShadow = true;
         scene.add(aiPaddle);
-        
-        const handleMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-        const playerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
-        playerHandle.position.set(0, -0.2, 0);
-        playerPaddle.add(playerHandle);
-        const aiHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
-        aiHandle.position.set(0, -0.2, 0);
-        aiPaddle.add(aiHandle);
         
         // Ball
         const ballMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff4400, emissiveIntensity: 0.4 });
@@ -312,14 +297,13 @@
         scene.add(trailPoints);
         
         // ================================================================
-        // GAME STATE - SIMPLIFIED FOR STABILITY
+        // GAME STATE
         // ================================================================
         
         let playerSide = 'bottom';
         let playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
         let aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
         
-        // Ball physics - simplified
         let ballPos = { x: 0, y: 0.2, z: 0 };
         let ballVel = { x: 0, y: 0, z: 0 };
         
@@ -327,11 +311,11 @@
         let gameActive = false;
         let pointActive = false;
         let waitingForServe = true;
-        let ballAttached = true;
-        let serveTimer = 0;
         let rallyCount = 0;
         let totalRallies = 0;
         let bounceCount = 0;
+        let pointResetTimer = 0;
+        let isResetting = false;
         
         // Physics constants
         const GRAVITY = -12;
@@ -373,116 +357,11 @@
         }
         
         // ================================================================
-        // BALL PHYSICS - COMPLETELY REWRITTEN
+        // POINT RESET - FIXED: No freezing!
         // ================================================================
-        
-        function updatePhysics(delta) {
-            if (!pointActive) return;
-            
-            // Apply gravity to Y velocity
-            ballVel.y += GRAVITY * delta;
-            
-            // Update position
-            ballPos.x += ballVel.x * delta;
-            ballPos.y += ballVel.y * delta;
-            ballPos.z += ballVel.z * delta;
-            
-            // ========== BOUNCE DETECTION ==========
-            
-            // Bounce on table (when ball hits the playing surface)
-            // Table bounds: X between -2.4 and 2.4, Z between -4.0 and 4.0
-            if (ballPos.y < 0.12 && Math.abs(ballPos.x) < 2.5 && Math.abs(ballPos.z) < 4.2 && ballVel.y < 0) {
-                ballVel.y = -ballVel.y * BOUNCE_DAMPING;
-                ballPos.y = 0.12;
-                bounceCount++;
-                console.log('Bounce! Count:', bounceCount);
-            }
-            
-            // ========== NET COLLISION - FIXED ==========
-            // Net is at Z = 0, height 0.45, width 5.1
-            // Ball hits net if it's at net height and crossing the net line
-            if (Math.abs(ballPos.z) < 0.1 && ballPos.y < 0.5 && ballPos.y > 0.1 && Math.abs(ballVel.z) > 1) {
-                // Hit the net - point ends
-                if (ballVel.z > 0) {
-                    resetPoint('player', 'AI hit the net');
-                } else {
-                    resetPoint('ai', 'You hit the net');
-                }
-                return;
-            }
-            
-            // ========== OUT OF BOUNDS ==========
-            // Ball went past player side (past Z = -4.5)
-            if (ballPos.z < -4.5) {
-                if (ballVel.z < 0) {
-                    resetPoint('ai', 'You missed the ball');
-                }
-                return;
-            }
-            
-            // Ball went past AI side (past Z = 4.5)
-            if (ballPos.z > 4.5) {
-                if (ballVel.z > 0) {
-                    resetPoint('player', 'AI missed the ball');
-                }
-                return;
-            }
-            
-            // Ball out sideways
-            if (Math.abs(ballPos.x) > 2.8) {
-                resetPoint(ballVel.x > 0 ? 'player' : 'ai', 'Ball went out');
-                return;
-            }
-            
-            // Update ball visual
-            ball.position.set(ballPos.x, ballPos.y, ballPos.z);
-            ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
-            
-            // Update trail
-            ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
-            if (ballTrail.length > 20) ballTrail.pop();
-            let verts = [];
-            for (let p of ballTrail) verts.push(p.x, p.y + 0.05, p.z);
-            let geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
-            scene.remove(trailPoints);
-            trailPoints = new THREE.Points(geo, trailMat);
-            scene.add(trailPoints);
-        }
-        
-        // ================================================================
-        // GAME LOGIC
-        // ================================================================
-        
-        function startServe() {
-            waitingForServe = false;
-            pointActive = true;
-            ballAttached = false;
-            bounceCount = 0;
-            
-            // Serve from player side
-            let dir = (Math.random() - 0.5) * 2;
-            ballPos = { x: playerPaddlePos.x, y: 0.3, z: playerPaddlePos.z };
-            ballVel = { x: dir * 4, y: 5 + Math.random() * 3, z: playerSide === 'bottom' ? 10 : -10 };
-            rallyCount = 0;
-            console.log('Serve! Ball velocity Z:', ballVel.z);
-        }
-        
-        function aiServe() {
-            waitingForServe = false;
-            pointActive = true;
-            ballAttached = false;
-            bounceCount = 0;
-            
-            let dir = (Math.random() - 0.5) * 2;
-            ballPos = { x: aiPaddlePos.x, y: 0.3, z: aiPaddlePos.z };
-            ballVel = { x: dir * 4, y: 5 + Math.random() * 3, z: -10 };
-            rallyCount = 0;
-            console.log('AI serves! Ball velocity Z:', ballVel.z);
-        }
         
         function resetPoint(winner, reason) {
-            if (!pointActive) return;
+            if (!pointActive && !isResetting) return;
             
             if (winner === 'player') {
                 playerScore++;
@@ -495,43 +374,175 @@
             totalRallies++;
             updateUI();
             
-            // Reset for next point
+            // Mark that we're resetting to prevent multiple resets
+            isResetting = true;
             pointActive = false;
-            waitingForServe = true;
-            ballAttached = true;
+            
+            // Reset ball physics completely
             ballVel = { x: 0, y: 0, z: 0 };
             ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
             ball.position.set(ballPos.x, ballPos.y, ballPos.z);
             ballTrail = [];
             bounceCount = 0;
             
+            // Clear trail
+            const emptyGeo = new THREE.BufferGeometry();
+            scene.remove(trailPoints);
+            trailPoints = new THREE.Points(emptyGeo, trailMat);
+            scene.add(trailPoints);
+            
+            // Set waiting for serve
+            waitingForServe = true;
+            
             // Determine next server (loser serves)
             if (winner === 'player') {
-                document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT';
-                setTimeout(() => { if (gameActive && waitingForServe) aiServe(); }, 1000);
+                document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT<br>Serving in 1 second...';
+                setTimeout(() => { 
+                    if (gameActive && waitingForServe) {
+                        aiServe();
+                        isResetting = false;
+                    }
+                }, 1000);
             } else {
                 document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE NEXT<br>Press SPACE to serve';
+                setTimeout(() => {
+                    isResetting = false;
+                }, 100);
             }
             
+            // Update progress
             let prog = Math.min(100, (totalRallies / 50) * 100);
             document.getElementById('ai-progress').style.width = `${prog}%`;
             document.getElementById('rallies').textContent = totalRallies;
+            
+            rlAgent.endEpisode(totalRallies);
         }
+        
+        // ================================================================
+        // SERVE FUNCTIONS
+        // ================================================================
+        
+        function startServe() {
+            if (!waitingForServe) return;
+            waitingForServe = false;
+            pointActive = true;
+            isResetting = false;
+            bounceCount = 0;
+            
+            let dir = (Math.random() - 0.5) * 2;
+            ballPos = { x: playerPaddlePos.x, y: 0.3, z: playerPaddlePos.z };
+            ballVel = { x: dir * 4, y: 5 + Math.random() * 3, z: playerSide === 'bottom' ? 10 : -10 };
+            rallyCount = 0;
+            console.log('Serve!');
+            flashPaddle(playerPaddle, 0x88aaff);
+        }
+        
+        function aiServe() {
+            if (!waitingForServe) return;
+            waitingForServe = false;
+            pointActive = true;
+            isResetting = false;
+            bounceCount = 0;
+            
+            let dir = (Math.random() - 0.5) * 2;
+            ballPos = { x: aiPaddlePos.x, y: 0.3, z: aiPaddlePos.z };
+            ballVel = { x: dir * 4, y: 5 + Math.random() * 3, z: -10 };
+            rallyCount = 0;
+            console.log('AI serves!');
+            flashPaddle(aiPaddle, 0xff8888);
+        }
+        
+        // ================================================================
+        // BALL PHYSICS - WITH PROPER OUT OF BOUNDS
+        // ================================================================
+        
+        function updatePhysics(delta) {
+            if (!pointActive) return;
+            if (waitingForServe) return;
+            
+            // Apply gravity
+            ballVel.y += GRAVITY * delta;
+            
+            // Update position
+            ballPos.x += ballVel.x * delta;
+            ballPos.y += ballVel.y * delta;
+            ballPos.z += ballVel.z * delta;
+            
+            // ========== BOUNCE ON TABLE ==========
+            if (ballPos.y < 0.12 && Math.abs(ballPos.x) < 2.5 && Math.abs(ballPos.z) < 4.2 && ballVel.y < 0) {
+                ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                ballPos.y = 0.12;
+                bounceCount++;
+                console.log('Bounce!', bounceCount);
+            }
+            
+            // ========== OUT OF BOUNDS - ZONE DETECTION ==========
+            // Player side out (past Z = -4.5) - YOU missed
+            if (ballPos.z < -4.5) {
+                resetPoint('ai', 'Ball went past your side');
+                return;
+            }
+            
+            // AI side out (past Z = 4.5) - AI missed
+            if (ballPos.z > 4.5) {
+                resetPoint('player', 'Ball went past AI side');
+                return;
+            }
+            
+            // Sideways out (past X = ±2.8)
+            if (Math.abs(ballPos.x) > 2.8) {
+                if (ballVel.x > 0) {
+                    resetPoint('player', 'Ball went right out');
+                } else {
+                    resetPoint('ai', 'Ball went left out');
+                }
+                return;
+            }
+            
+            // ========== NET COLLISION ==========
+            if (Math.abs(ballPos.z) < 0.15 && ballPos.y < 0.5 && ballPos.y > 0.1 && Math.abs(ballVel.z) > 2) {
+                if (ballVel.z > 0) {
+                    resetPoint('player', 'AI hit the net');
+                } else {
+                    resetPoint('ai', 'You hit the net');
+                }
+                return;
+            }
+            
+            // Update ball visual
+            ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+            ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
+            
+            // Update trail (only if ball is moving)
+            if (Math.abs(ballVel.x) > 0.1 || Math.abs(ballVel.z) > 0.1) {
+                ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
+                if (ballTrail.length > 20) ballTrail.pop();
+                
+                let verts = [];
+                for (let p of ballTrail) verts.push(p.x, p.y + 0.05, p.z);
+                let geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+                scene.remove(trailPoints);
+                trailPoints = new THREE.Points(geo, trailMat);
+                scene.add(trailPoints);
+            }
+        }
+        
+        // ================================================================
+        // PLAYER HIT
+        // ================================================================
         
         function handlePlayerHit() {
             if (!gameActive) return;
             
             // Serve
-            if (waitingForServe && ballAttached) {
-                if (playerSide === 'bottom' ? ballVel.z === 0 : true) {
-                    startServe();
-                    flashPaddle(playerPaddle, 0x88aaff);
-                }
+            if (waitingForServe) {
+                startServe();
                 return;
             }
             
             // Regular hit during rally
-            if (!pointActive || waitingForServe) return;
+            if (!pointActive) return;
             
             let paddleZ = playerSide === 'bottom' ? -3.5 : 3.5;
             let distZ = Math.abs(ballPos.z - paddleZ);
@@ -558,18 +569,21 @@
                 rallyCount++;
                 bounceCount = 0;
                 
-                console.log(`Hit! Rally: ${rallyCount}, Direction: ${dirX > 1.5 ? 'RIGHT' : (dirX < -1.5 ? 'LEFT' : 'CENTER')}`);
+                console.log(`Hit! Rally: ${rallyCount}, Dir: ${dirX > 1.5 ? 'RIGHT' : (dirX < -1.5 ? 'LEFT' : 'CENTER')}`);
                 flashPaddle(playerPaddle, 0x88aaff);
                 ballMat.emissiveIntensity = 0.8;
                 setTimeout(() => ballMat.emissiveIntensity = 0.4, 100);
             }
         }
         
+        // ================================================================
+        // AI MOVEMENT
+        // ================================================================
+        
         function updateAI(delta) {
             if (!gameActive) return;
             if (!pointActive || waitingForServe) return;
             
-            let speed = 6;
             let targetX = Math.max(-2.3, Math.min(2.3, ballPos.x));
             let targetY = Math.max(0.2, Math.min(1.2, ballPos.y + 0.3));
             
@@ -604,6 +618,10 @@
             }
         }
         
+        // ================================================================
+        // PLAYER PADDLE CONTROL
+        // ================================================================
+        
         function updatePlayerPaddle(delta) {
             if (!gameActive) return;
             
@@ -624,6 +642,10 @@
             updatePaddlePositions();
         }
         
+        // ================================================================
+        // UI FUNCTIONS
+        // ================================================================
+        
         function updateUI() {
             document.getElementById('player-score').textContent = playerScore;
             document.getElementById('ai-score').textContent = aiScore;
@@ -638,12 +660,19 @@
             rallyCount = 0;
             waitingForServe = true;
             pointActive = false;
-            ballAttached = true;
+            isResetting = false;
             bounceCount = 0;
-            ballPos = { x: 0, y: 0.2, z: playerSide === 'bottom' ? -3.5 : 3.5 };
+            ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
             ballVel = { x: 0, y: 0, z: 0 };
             ballTrail = [];
             ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+            
+            // Clear trail
+            const emptyGeo = new THREE.BufferGeometry();
+            scene.remove(trailPoints);
+            trailPoints = new THREE.Points(emptyGeo, trailMat);
+            scene.add(trailPoints);
+            
             updateUI();
             document.getElementById('ai-progress').style.width = '0%';
             document.getElementById('serve-indicator').innerHTML = '🏓 Game reset - press START<br>You serve first!';
@@ -653,6 +682,9 @@
         function startGame() {
             gameActive = true;
             resetGame();
+            waitingForServe = true;
+            pointActive = false;
+            isResetting = false;
             document.getElementById('game-status').textContent = "Playing";
             document.getElementById('game-status').className = 'status-playing';
             document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE<br>Press SPACE to serve!';
@@ -723,18 +755,18 @@
         });
         
         console.log('========================================');
-        console.log('🏓 TABLE TENNIS - BALL PHYSICS FIXED');
+        console.log('🏓 TABLE TENNIS - FULLY FIXED');
         console.log('========================================');
         console.log('FIXES:');
-        console.log('  ✅ Ball physics rewritten from scratch');
-        console.log('  ✅ No more freezing at net');
-        console.log('  ✅ Smooth ball movement with gravity');
-        console.log('  ✅ Bounce detection works correctly');
+        console.log('  ✅ Ball no longer freezes when out of bounds');
+        console.log('  ✅ Point resets automatically after out');
+        console.log('  ✅ Next server determined correctly');
+        console.log('  ✅ Smooth ball physics throughout');
         console.log('');
         console.log('HOW TO PLAY:');
         console.log('  1. Click START GAME');
         console.log('  2. Press SPACE to serve');
-        console.log('  3. Move paddle with arrow keys + W/S');
+        console.log('  3. Move paddle with ← → ↑ ↓ W S');
         console.log('  4. Press Q to switch sides');
         console.log('========================================');
     </script>
