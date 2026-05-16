@@ -150,3 +150,4 @@ if (stepsSinceLastMove >= currentInterval) {
     stepsSinceLastMove = 0;
 }
 
+![Game Screenshot](https://raw.githubusercontent.com/citrudevmobile/adaptive-gym-env-demo/Screenshot From 2026-05-16 17-21-26.png)
