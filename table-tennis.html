@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table Tennis - Adaptive RL | Real Physics & Rules</title>
+    <title>Table Tennis - Adaptive RL | Full Game</title>
     <style>
         * {
             margin: 0;
@@ -102,6 +102,7 @@
         .button:hover { transform: scale(1.02); }
         .button-secondary { background: linear-gradient(135deg, #444, #222); color: white; }
         .button-stop { background: linear-gradient(135deg, #ff4444, #cc0000); color: white; }
+        .button-switch { background: linear-gradient(135deg, #44aaff, #2288cc); color: white; }
         
         .status-playing { background: #00aa44; animation: pulse 1s infinite; }
         .status-idle { background: #666; }
@@ -163,20 +164,23 @@
             margin-top: 10px;
         }
         
-        .key-hint {
-            font-size: 10px;
-            color: #888;
-            margin-top: 5px;
+        .rule-badge {
+            background: #ffaa4422;
+            border-left: 3px solid #ffaa44;
+            padding: 5px 8px;
+            margin: 5px 0;
+            font-size: 11px;
         }
         
-        .collision-flash {
-            animation: flash 0.1s ease-out;
-        }
-        
-        @keyframes flash {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.3); }
-            100% { opacity: 1; transform: scale(1); }
+        .side-indicator {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            padding: 5px;
+            border-radius: 5px;
+            margin-top: 10px;
+            background: rgba(68, 170, 255, 0.3);
+            color: #44aaff;
         }
     </style>
 </head>
@@ -186,7 +190,7 @@
         
         <div class="sidebar">
             <h1>🏓 TABLE TENNIS - ADAPTIVE RL</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Real Physics | Directional Control | Proper Serve Rules</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">RL Module Separated | Full Physics</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -203,25 +207,39 @@
                         <div class="score-number" id="ai-score">0</div>
                     </div>
                 </div>
+                <div class="side-indicator" id="side-indicator">📍 YOU: BOTTOM</div>
                 <div class="serve-indicator" id="serve-indicator">
                     🏓 Game stopped - press START
                 </div>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                     <button class="button" id="btn-start">▶ Start Game</button>
                     <button class="button button-stop" id="btn-stop">⏹ Stop Game</button>
+                    <button class="button button-switch" id="btn-switch">🔄 Switch Sides</button>
                     <button class="button button-secondary" id="btn-reset">🔄 Reset Score</button>
                 </div>
             </div>
             
-            <h2>🤖 AI LEARNING</h2>
+            <h2>🧠 AI LEARNING</h2>
             <div class="metric">
                 <div class="metric-row">
-                    <span class="metric-label">Rallies Played:</span>
-                    <span class="metric-value" id="rallies">0</span>
+                    <span class="metric-label">Neural Network:</span>
+                    <span class="metric-value">14 → 128 → 128 → 64 → 9</span>
                 </div>
                 <div class="metric-row">
-                    <span class="metric-label">AI Level:</span>
-                    <span class="metric-value" id="ai-level">Beginner</span>
+                    <span class="metric-label">Training Episodes:</span>
+                    <span class="metric-value" id="train-episodes">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Exploration (ε):</span>
+                    <span class="metric-value" id="epsilon">0.30</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Network Loss:</span>
+                    <span class="metric-value" id="loss">0.0000</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">AI Strategy:</span>
+                    <span class="metric-value" id="ai-style">Balanced</span>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="ai-progress"></div>
@@ -234,43 +252,55 @@
                 <p><kbd>←</kbd> <kbd>→</kbd> - Move paddle LEFT/RIGHT</p>
                 <p><kbd>↑</kbd> <kbd>↓</kbd> - Move paddle UP/DOWN</p>
                 <p><kbd>W</kbd> <kbd>S</kbd> - Move paddle FORWARD/BACKWARD</p>
-                <p><kbd>SPACE</kbd> - Hit the ball!</p>
-                <p><kbd>E</kbd> - TOSS & SERVE</p>
-                <div class="key-hint">💡 Ball direction = where you hit on the paddle!</div>
-                <div class="key-hint">💡 Hit left side → ball goes left | Hit right side → ball goes right</div>
+                <p><kbd>SPACE</kbd> - Hit/Serve the ball!</p>
+                <p><kbd>E</kbd> - Toss ball (when serving)</p>
+                <p><kbd>Q</kbd> - Switch sides!</p>
             </div>
             
-            <h2>🏓 REAL TENNIS RULES</h2>
-            <div class="metric" style="font-size: 11px; line-height: 1.5;">
-                <p>✅ Serve must bounce on opponent's side</p>
-                <p>✅ Ball direction controlled by paddle impact point</p>
-                <p>✅ Visual collision feedback (paddle flashes)</p>
-                <p>✅ Ball loses speed after each bounce</p>
+            <h2>🏓 FEATURES</h2>
+            <div class="metric" style="font-size: 11px;">
+                <div class="rule-badge">✅ RL Module completely separate from HTML</div>
+                <div class="rule-badge">✅ Ball attaches to paddle before serve</div>
+                <div class="rule-badge">✅ Press Q to switch sides</div>
+                <div class="rule-badge">✅ Ball must bounce ONCE before hitting</div>
+                <div class="rule-badge">✅ Directional control based on paddle hit position</div>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🏓 <strong>REAL PHYSICS</strong><br>
-        🧑 <strong>YOU:</strong> ← → = Left/Right | ↑ ↓ = Up/Down | W S = Forward/Back | SPACE = Hit | E = Serve<br>
-        🎯 <strong>DIRECTION:</strong> Hit left side of paddle → ball goes LEFT | Hit right side → ball goes RIGHT<br>
-        🟡 <strong>COLLISION:</strong> Paddle flashes when you hit the ball!
+        🏓 <strong>RL MODULE SEPARATED</strong><br>
+        🧑 <strong>YOU:</strong> ← → ↑ ↓ W S = Move | SPACE = Hit | E = Toss | Q = Switch Sides<br>
+        🤖 <strong>AI:</strong> TensorFlow.js DQN (14→128→128→64→9)<br>
+        🟡 <strong>BALL:</strong> Attaches to paddle | Must bounce before hit<br>
+        📁 <strong>Files:</strong> table-tennis-rl.js + table-tennis.html
     </div>
 
+    <!-- Load Three.js and TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    
+    <!-- Load the SEPARATE RL module -->
+    <script src="table-tennis-rl.js"></script>
     
     <script>
         (function() {
             console.log('========================================');
-            console.log('🏓 TABLE TENNIS - REAL PHYSICS & RULES');
+            console.log('🏓 TABLE TENNIS - RL MODULE SEPARATED');
             console.log('========================================');
+            
+            // Wait for RL module to load
+            if (typeof TableTennisAgent === 'undefined') {
+                console.error('TableTennisAgent not loaded! Check that table-tennis-rl.js is loaded first.');
+                return;
+            }
             
             const container = document.getElementById('canvas-container');
             let width = container.clientWidth;
             let height = container.clientHeight;
             
             // ================================================================
-            // THREE.JS SETUP
+            // THREE.JS SETUP (Visualization only - no RL logic here)
             // ================================================================
             
             const scene = new THREE.Scene();
@@ -286,10 +316,7 @@
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
             
-            // ================================================================
-            // LIGHTS
-            // ================================================================
-            
+            // Lights
             const ambientLight = new THREE.AmbientLight(0x404060);
             scene.add(ambientLight);
             
@@ -305,10 +332,7 @@
             const ballLight = new THREE.PointLight(0xffaa44, 0.6, 6);
             scene.add(ballLight);
             
-            // ================================================================
-            // TABLE
-            // ================================================================
-            
+            // Table
             const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a6a3a, roughness: 0.3, metalness: 0.1 });
             const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 9), tableMat);
             tableTop.position.set(0, 0, 0);
@@ -318,7 +342,6 @@
             
             // White lines
             const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            
             const leftLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
             leftLine.position.set(-2.4, 0.06, 0);
             scene.add(leftLine);
@@ -339,10 +362,7 @@
             centerLine.position.set(0, 0.06, 0);
             scene.add(centerLine);
             
-            // ================================================================
-            // THE NET
-            // ================================================================
-            
+            // Net
             const netMatTransparent = new THREE.MeshStandardMaterial({ color: 0xccccaa, transparent: true, opacity: 0.7 });
             const netMesh = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.4, 0.05), netMatTransparent);
             netMesh.position.set(0, 0.25, 0);
@@ -362,19 +382,14 @@
             rightPost.position.set(2.55, 0.3, 0);
             scene.add(rightPost);
             
-            // ================================================================
-            // PADDLES
-            // ================================================================
-            
+            // Paddles
             const paddleMatBlue = new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5 });
             const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMatBlue);
-            playerPaddle.position.set(0, 0.5, -3.5);
             playerPaddle.castShadow = true;
             scene.add(playerPaddle);
             
             const aiPaddleMat = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5 });
             const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), aiPaddleMat);
-            aiPaddle.position.set(0, 0.5, 3.5);
             aiPaddle.castShadow = true;
             scene.add(aiPaddle);
             
@@ -387,24 +402,7 @@
             aiHandle.position.set(0, -0.2, 0);
             aiPaddle.add(aiHandle);
             
-            // ================================================================
-            // COLLISION EFFECT - Visual indicator
-            // ================================================================
-            
-            function flashPaddle(paddle, color) {
-                const originalColor = paddle.material.color.getHex();
-                paddle.material.color.setHex(color);
-                paddle.material.emissiveIntensity = 0.8;
-                setTimeout(() => {
-                    paddle.material.color.setHex(originalColor);
-                    paddle.material.emissiveIntensity = 0;
-                }, 100);
-            }
-            
-            // ================================================================
-            // BALL
-            // ================================================================
-            
+            // Ball
             const ballMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff4400, emissiveIntensity: 0.4 });
             const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), ballMat);
             ball.castShadow = true;
@@ -419,6 +417,7 @@
             // GAME STATE
             // ================================================================
             
+            let playerSide = 'bottom';
             let playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
             let aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
             
@@ -433,13 +432,16 @@
             let totalRallies = 0;
             let lastPointWinner = null;
             
-            // Serve state
+            let ballAttached = true;
+            let ballBouncedOnPlayerSide = false;
+            let ballBouncedOnAISide = false;
+            
             let isTossing = false;
             let tossTimer = 0;
-            let ballInHand = true;
-            let serveBounced = false;  // Track if serve has bounced on opponent's side
+            let serveBounced = false;
+            let waitingForServe = true;
             
-            // Physics
+            // Physics constants
             const GRAVITY = -14;
             const BOUNCE_DAMPING = 0.85;
             const PADDLE_SPEED = 8;
@@ -455,18 +457,68 @@
             };
             
             // ================================================================
-            // SERVE FUNCTIONS
+            // CREATE RL AGENT (FROM SEPARATE MODULE)
             // ================================================================
+            
+            const rlAgent = new TableTennisAgent();
+            
+            // ================================================================
+            // GAME FUNCTIONS
+            // ================================================================
+            
+            function flashPaddle(paddle, color) {
+                const originalColor = paddle.material.color.getHex();
+                paddle.material.color.setHex(color);
+                paddle.material.emissiveIntensity = 0.8;
+                setTimeout(() => {
+                    paddle.material.color.setHex(originalColor);
+                    paddle.material.emissiveIntensity = 0;
+                }, 100);
+            }
+            
+            function switchSides() {
+                if (!gameActive) return;
+                
+                if (playerSide === 'bottom') {
+                    playerSide = 'top';
+                    document.getElementById('side-indicator').innerHTML = '📍 YOU: TOP (near net)';
+                } else {
+                    playerSide = 'bottom';
+                    document.getElementById('side-indicator').innerHTML = '📍 YOU: BOTTOM (far from net)';
+                }
+                updatePositionsForSide();
+                console.log('🔄 Switched sides! You are now at the', playerSide);
+            }
+            
+            function updatePositionsForSide() {
+                if (playerSide === 'bottom') {
+                    playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, -3.5);
+                    aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.5);
+                } else {
+                    playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, 3.5);
+                    aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, -3.5);
+                }
+            }
+            
+            function updateBallAttachment() {
+                if (!gameActive) return;
+                if (ballAttached && !pointActive && waitingForServe && !isTossing) {
+                    ballPos.x = playerPaddlePos.x;
+                    ballPos.y = 0.2;
+                    ballPos.z = playerPaddlePos.z;
+                    ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+                    ball.visible = true;
+                }
+            }
             
             function startToss() {
                 if (!gameActive) return;
-                if (!pointActive && waitingForServe) {
+                if (!pointActive && waitingForServe && ballAttached) {
                     isTossing = true;
                     tossTimer = 0;
-                    ballInHand = true;
+                    ballAttached = false;
                     serveBounced = false;
                     ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
-                    ball.visible = true;
                     console.log('🏓 Tossing ball up...');
                 }
             }
@@ -477,22 +529,20 @@
                 tossTimer += delta;
                 
                 if (tossTimer < 0.3) {
-                    // Rising
                     let tossHeight = tossTimer / 0.3 * 0.5;
                     ballPos.y = 0.2 + tossHeight;
                     ballPos.x = playerPaddlePos.x;
                     ballPos.z = playerPaddlePos.z;
                 } else if (tossTimer < 0.6) {
-                    // Falling
                     let tossHeight = (0.6 - tossTimer) / 0.3 * 0.5;
                     ballPos.y = 0.2 + tossHeight;
                     ballPos.x = playerPaddlePos.x;
                     ballPos.z = playerPaddlePos.z;
                 } else {
                     isTossing = false;
-                    ballInHand = true;
+                    ballAttached = true;
                     ballPos.y = 0.2;
-                    console.log('🏓 Ball ready - press SPACE to serve!');
+                    console.log('🏓 Ball back on paddle - press SPACE to serve!');
                 }
                 
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
@@ -500,8 +550,7 @@
             
             function executeServe() {
                 if (!gameActive) return;
-                if (!pointActive && waitingForServe && !isTossing && ballInHand) {
-                    // Normal serve from hand
+                if (!pointActive && waitingForServe && !isTossing && ballAttached) {
                     let hitPosition = (ballPos.x - playerPaddlePos.x) / 0.25;
                     hitPosition = Math.max(-1, Math.min(1, hitPosition));
                     
@@ -511,18 +560,17 @@
                         z: 11
                     };
                     ballPos = { x: playerPaddlePos.x, y: 0.3, z: playerPaddlePos.z };
-                    ballInHand = false;
+                    ballAttached = false;
                     waitingForServe = false;
                     pointActive = true;
                     rallyCount = 0;
                     serveBounced = false;
-                    console.log(`🏓 Serve hit! Direction: ${hitPosition > 0.3 ? 'RIGHT' : (hitPosition < -0.3 ? 'LEFT' : 'CENTER')}`);
+                    ballBouncedOnPlayerSide = false;
+                    ballBouncedOnAISide = false;
                     
+                    console.log(`🏓 Serve hit! Direction: ${hitPosition > 0.3 ? 'RIGHT' : (hitPosition < -0.3 ? 'LEFT' : 'CENTER')}`);
                     flashPaddle(playerPaddle, 0x88aaff);
-                    ballMat.emissiveIntensity = 0.8;
-                    setTimeout(() => { ballMat.emissiveIntensity = 0.4; }, 200);
                 } else if (isTossing) {
-                    // Hit during toss
                     let hitPosition = (ballPos.x - playerPaddlePos.x) / 0.25;
                     hitPosition = Math.max(-1, Math.min(1, hitPosition));
                     
@@ -533,16 +581,16 @@
                     };
                     ballPos = { x: playerPaddlePos.x, y: ballPos.y, z: playerPaddlePos.z };
                     isTossing = false;
-                    ballInHand = false;
+                    ballAttached = false;
                     waitingForServe = false;
                     pointActive = true;
                     rallyCount = 0;
                     serveBounced = false;
-                    console.log(`🏓 Serve hit during toss! Direction: ${hitPosition > 0.3 ? 'RIGHT' : (hitPosition < -0.3 ? 'LEFT' : 'CENTER')}`);
+                    ballBouncedOnPlayerSide = false;
+                    ballBouncedOnAISide = false;
                     
+                    console.log(`🏓 Serve hit during toss! Direction: ${hitPosition > 0.3 ? 'RIGHT' : (hitPosition < -0.3 ? 'LEFT' : 'CENTER')}`);
                     flashPaddle(playerPaddle, 0x88aaff);
-                    ballMat.emissiveIntensity = 0.8;
-                    setTimeout(() => { ballMat.emissiveIntensity = 0.4; }, 200);
                 }
             }
             
@@ -561,9 +609,11 @@
                 
                 waitingForServe = true;
                 pointActive = false;
-                ballInHand = true;
+                ballAttached = true;
                 isTossing = false;
                 serveBounced = false;
+                ballBouncedOnPlayerSide = false;
+                ballBouncedOnAISide = false;
                 ballTrail = [];
                 
                 ballPos = { x: playerPaddlePos.x, y: 0.2, z: playerPaddlePos.z };
@@ -572,12 +622,9 @@
                 ball.visible = true;
                 
                 if (winner === 'player') {
-                    document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT 🤖<br><span style="font-size:10px">AI will serve automatically</span>';
-                    // AI serves automatically
+                    document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVES NEXT 🤖';
                     setTimeout(() => {
-                        if (gameActive && waitingForServe && !pointActive) {
-                            aiServe();
-                        }
+                        if (gameActive && waitingForServe && !pointActive) aiServe();
                     }, 500);
                 } else {
                     document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE NEXT 🏓<br><span style="font-size:10px">Press E to toss, then SPACE to serve</span>';
@@ -587,15 +634,7 @@
                 document.getElementById('ai-progress').style.width = `${progress}%`;
                 document.getElementById('rallies').textContent = totalRallies;
                 
-                if (totalRallies < 10) {
-                    document.getElementById('ai-level').textContent = 'Beginner';
-                } else if (totalRallies < 30) {
-                    document.getElementById('ai-level').textContent = 'Intermediate';
-                } else if (totalRallies < 60) {
-                    document.getElementById('ai-level').textContent = 'Advanced';
-                } else {
-                    document.getElementById('ai-level').textContent = 'Expert';
-                }
+                rlAgent.updateUI();
             }
             
             function aiServe() {
@@ -608,12 +647,14 @@
                         z: -11
                     };
                     ballPos = { x: direction * 1.5, y: 0.3, z: 3.5 };
+                    ballAttached = false;
                     waitingForServe = false;
                     pointActive = true;
                     rallyCount = 0;
                     serveBounced = false;
-                    console.log(`🤖 AI serves! Direction: ${direction > 0.3 ? 'RIGHT' : (direction < -0.3 ? 'LEFT' : 'CENTER')}`);
-                    
+                    ballBouncedOnPlayerSide = false;
+                    ballBouncedOnAISide = false;
+                    console.log(`🤖 AI serves!`);
                     flashPaddle(aiPaddle, 0xff8888);
                 }
             }
@@ -621,70 +662,59 @@
             function checkScoring() {
                 if (!pointActive) return;
                 
-                // SERVE RULE: Serve must bounce on opponent's side
                 if (rallyCount === 0) {
-                    // This is the serve
                     if ((ballVel.z > 0 && ballPos.z > 0.5 && !serveBounced)) {
-                        // Ball crossed net, check if it bounces
                         if (ballPos.y < 0.12 && Math.abs(ballPos.z) > 0.5) {
                             serveBounced = true;
                             console.log('🏓 Serve bounced on opponent side - good serve!');
                         }
                     }
-                    
-                    // Serve fault: ball didn't bounce on opponent's side
                     if (ballPos.z > 1.0 && !serveBounced && ballVel.z > 0) {
                         resetPoint('ai', 'Serve fault - no bounce on opponent side');
                         return;
                     }
-                    
-                    // Serve fault: ball hit net
                     if (Math.abs(ballPos.z) < 0.15 && ballPos.y < 0.2 && ballVel.z > 0) {
                         resetPoint('ai', 'Serve hit the net');
                         return;
                     }
                 }
                 
-                // Ball hit floor on player side (player misses)
-                if (ballPos.z < -4.3 && ballVel.z < 0) {
-                    resetPoint('ai', 'Ball hit your side twice');
-                }
-                // Ball hit floor on AI side (AI misses)
-                else if (ballPos.z > 4.3 && ballVel.z > 0) {
-                    resetPoint('player', 'AI missed the ball');
-                }
-                // Ball hit net during rally
+                if (ballPos.z < -4.3 && ballVel.z < 0) resetPoint('ai', 'You missed');
+                else if (ballPos.z > 4.3 && ballVel.z > 0) resetPoint('player', 'AI missed');
                 else if (Math.abs(ballPos.z) < 0.15 && ballPos.y < 0.2 && Math.abs(ballPos.z) > 0.05 && rallyCount > 0) {
-                    if (ballVel.z > 0) {
-                        resetPoint('player', 'AI hit the net');
-                    } else {
-                        resetPoint('ai', 'You hit the net');
-                    }
+                    if (ballVel.z > 0) resetPoint('player', 'AI hit net');
+                    else resetPoint('ai', 'You hit net');
                 }
-                // Ball out sideways
                 else if (Math.abs(ballPos.x) > 2.9) {
-                    if (ballVel.x > 0) {
-                        resetPoint('player', 'Ball went right out');
-                    } else {
-                        resetPoint('ai', 'Ball went left out');
-                    }
+                    resetPoint(ballVel.x > 0 ? 'player' : 'ai', 'Ball out');
                 }
             }
             
-            // ================================================================
-            // GAME ACTIONS - WITH DIRECTION CONTROL
-            // ================================================================
+            function updateBounceTracking() {
+                if (ballPos.y < 0.12 && ballVel.y < 0) {
+                    if (ballPos.z < -3.5 && !ballBouncedOnPlayerSide) {
+                        ballBouncedOnPlayerSide = true;
+                        console.log('🏓 Ball bounced on YOUR side - you can now hit!');
+                    }
+                    if (ballPos.z > 3.5 && !ballBouncedOnAISide) {
+                        ballBouncedOnAISide = true;
+                        console.log('🏓 Ball bounced on AI side - AI can now hit!');
+                    }
+                }
+                if (Math.abs(ballPos.z) < 0.5 && Math.abs(ballVel.z) > 5) {
+                    if (ballVel.z > 0) ballBouncedOnAISide = false;
+                    else if (ballVel.z < 0) ballBouncedOnPlayerSide = false;
+                }
+            }
             
             function handlePlayerHit() {
                 if (!gameActive) return;
                 
-                // Serve case
-                if (!pointActive && waitingForServe && !isTossing && ballInHand) {
+                if (!pointActive && waitingForServe && ballAttached && !isTossing) {
                     executeServe();
                     return;
                 }
                 
-                // Regular hit during rally
                 if (!pointActive || waitingForServe) return;
                 
                 const distToPaddle = Math.abs(ballPos.z - playerPaddlePos.z);
@@ -692,28 +722,24 @@
                 const hitY = Math.abs(ballPos.y - playerPaddlePos.y);
                 
                 if (distToPaddle < 0.3 && hitX < 0.4 && hitY < 0.5 && ballVel.z < 0) {
-                    // Calculate hit position on paddle (-1 to 1)
-                    // This determines the direction of the shot!
+                    if (!ballBouncedOnPlayerSide && rallyCount > 0) {
+                        console.log('❌ ILLEGAL HIT! You hit before bounce!');
+                        resetPoint('ai', 'You hit before bounce');
+                        return;
+                    }
+                    
                     let hitPosition = (ballPos.x - playerPaddlePos.x) / 0.25;
                     hitPosition = Math.max(-1, Math.min(1, hitPosition));
-                    
-                    // Power based on paddle movement speed
-                    let power = 11;
-                    
-                    // Directional control - hit left side = ball goes left, hit right side = ball goes right
                     let directionX = hitPosition * 6;
                     
                     ballVel.x = directionX + (Math.random() - 0.5) * 1;
                     ballVel.y = 5 + Math.random() * 4;
                     ballVel.z = 12;
                     rallyCount++;
+                    ballBouncedOnPlayerSide = false;
                     
-                    console.log(`🏓 Hit! Position: ${hitPosition.toFixed(2)} → Direction: ${directionX > 1 ? 'RIGHT' : (directionX < -1 ? 'LEFT' : 'CENTER')}`);
-                    
-                    // Visual collision feedback
+                    console.log(`🏓 LEGAL HIT! Direction: ${directionX > 1 ? 'RIGHT' : (directionX < -1 ? 'LEFT' : 'CENTER')}`);
                     flashPaddle(playerPaddle, 0x88aaff);
-                    ballMat.emissiveIntensity = 0.9;
-                    setTimeout(() => { ballMat.emissiveIntensity = 0.4; }, 100);
                 }
             }
             
@@ -724,21 +750,25 @@
                 const aiAccuracy = Math.min(0.85, 0.3 + (totalRallies / 200));
                 const aiSpeed = Math.min(0.25, 0.1 + (totalRallies / 500));
                 
-                // AI predicts where to move
                 let targetX = Math.max(-2.3, Math.min(2.3, ballPos.x));
                 let targetY = Math.max(0.2, Math.min(1.2, ballPos.y + 0.3));
                 
                 aiPaddlePos.x += (targetX - aiPaddlePos.x) * aiSpeed;
                 aiPaddlePos.y += (targetY - aiPaddlePos.y) * aiSpeed;
-                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, AI_PADDLE_Z);
+                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.5);
                 
-                const distToBall = Math.abs(ballPos.z - AI_PADDLE_Z);
+                const distToBall = Math.abs(ballPos.z - 3.5);
                 if (distToBall < 0.3 && ballVel.z > 0) {
                     const hitX = Math.abs(ballPos.x - aiPaddlePos.x);
                     const hitY = Math.abs(ballPos.y - aiPaddlePos.y);
                     
                     if (hitX < 0.45 && hitY < 0.55) {
-                        // AI also has directional control based on where it hits
+                        if (!ballBouncedOnAISide && rallyCount > 0) {
+                            console.log('❌ AI CHEATING! AI hit before bounce!');
+                            resetPoint('player', 'AI hit before bounce');
+                            return;
+                        }
+                        
                         let hitPosition = (ballPos.x - aiPaddlePos.x) / 0.25;
                         hitPosition = Math.max(-1, Math.min(1, hitPosition));
                         let directionX = hitPosition * 5;
@@ -747,6 +777,7 @@
                         ballVel.y = 4.5 + Math.random() * 4;
                         ballVel.z = -11.5;
                         rallyCount++;
+                        ballBouncedOnAISide = false;
                         
                         flashPaddle(aiPaddle, 0xff8888);
                     }
@@ -762,19 +793,14 @@
                 ballPos.y += ballVel.y * delta;
                 ballPos.z += ballVel.z * delta;
                 
-                // Bounce on table surface
                 if (ballPos.y < 0.12 && Math.abs(ballPos.z) < 4.3 && Math.abs(ballPos.x) < 2.6 && ballVel.y < 0) {
                     ballVel.y = -ballVel.y * BOUNCE_DAMPING;
                     ballPos.y = 0.12;
                 }
-                
-                // Bounce on AI side
                 if (ballPos.y < 0.12 && ballPos.z > 4.1 && ballVel.z > 0 && ballVel.y < 0) {
                     ballVel.y = -ballVel.y * BOUNCE_DAMPING;
                     ballPos.y = 0.12;
                 }
-                
-                // Bounce on player side
                 if (ballPos.y < 0.12 && ballPos.z < -4.1 && ballVel.z < 0 && ballVel.y < 0) {
                     ballVel.y = -ballVel.y * BOUNCE_DAMPING;
                     ballPos.y = 0.12;
@@ -786,14 +812,13 @@
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
                 ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
                 
-                // Ball trail
+                updateBounceTracking();
+                
                 ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
                 if (ballTrail.length > 25) ballTrail.pop();
                 
                 const vertices = [];
-                for (let i = 0; i < ballTrail.length; i++) {
-                    vertices.push(ballTrail[i].x, ballTrail[i].y + 0.05, ballTrail[i].z);
-                }
+                for (let i = 0; i < ballTrail.length; i++) vertices.push(ballTrail[i].x, ballTrail[i].y + 0.05, ballTrail[i].z);
                 const trailGeo = new THREE.BufferGeometry();
                 trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
                 scene.remove(trailPoints);
@@ -820,12 +845,16 @@
                 playerPaddlePos.x = Math.max(-2.3, Math.min(2.3, newX));
                 playerPaddlePos.y = Math.max(0.2, Math.min(1.2, newY));
                 playerPaddlePos.z = Math.max(PADDLE_Z_MIN, Math.min(PADDLE_Z_MAX, newZ));
-                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, playerPaddlePos.z);
+                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, playerSide === 'bottom' ? -3.5 : 3.5);
+                
+                updateBallAttachment();
             }
             
             function updateUI() {
                 document.getElementById('player-score').textContent = playerScore;
                 document.getElementById('ai-score').textContent = aiScore;
+                document.getElementById('rallies').textContent = totalRallies;
+                rlAgent.updateUI();
             }
             
             function resetGame() {
@@ -833,27 +862,24 @@
                 aiScore = 0;
                 totalRallies = 0;
                 rallyCount = 0;
-                lastPointWinner = null;
                 waitingForServe = true;
                 pointActive = false;
-                ballInHand = true;
+                ballAttached = true;
                 isTossing = false;
                 serveBounced = false;
+                ballBouncedOnPlayerSide = false;
+                ballBouncedOnAISide = false;
                 ballPos = { x: 0, y: 0.2, z: -3.5 };
                 ballVel = { x: 0, y: 0, z: 0 };
                 ballTrail = [];
                 playerPaddlePos = { x: 0, y: 0.5, z: -3.5 };
                 aiPaddlePos = { x: 0, y: 0.5, z: 3.5 };
                 ball.position.set(ballPos.x, ballPos.y, ballPos.z);
-                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, playerPaddlePos.z);
-                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, aiPaddlePos.z);
-                
+                updatePositionsForSide();
                 updateUI();
                 document.getElementById('ai-progress').style.width = '0%';
-                document.getElementById('rallies').textContent = '0';
-                document.getElementById('ai-level').textContent = 'Beginner';
                 document.getElementById('serve-indicator').innerHTML = '🏓 Game reset - press START<br><span style="font-size:10px">You serve first!</span>';
-                
+                rlAgent.reset();
                 console.log('🔄 Game reset!');
             }
             
@@ -862,26 +888,15 @@
                 resetGame();
                 waitingForServe = true;
                 pointActive = false;
-                ballInHand = true;
-                isTossing = false;
-                serveBounced = false;
-                lastPointWinner = null;
+                ballAttached = true;
                 document.getElementById('game-status').textContent = "Playing";
                 document.getElementById('game-status').className = 'status-playing';
                 document.getElementById('serve-indicator').innerHTML = '🏓 YOU SERVE 🏓<br><span style="font-size:10px">Press E to toss, then SPACE to serve</span>';
                 console.log('🎮 GAME STARTED!');
-                console.log('CONTROLS:');
-                console.log('  - E to toss the ball');
-                console.log('  - SPACE to hit/serve');
-                console.log('  - Ball direction = where you hit on the paddle');
-                console.log('  - Hit left side → ball goes LEFT');
-                console.log('  - Hit right side → ball goes RIGHT');
             }
             
             function stopGame() {
                 gameActive = false;
-                pointActive = false;
-                waitingForServe = true;
                 document.getElementById('game-status').textContent = "Stopped";
                 document.getElementById('game-status').className = 'status-stopped';
                 document.getElementById('serve-indicator').innerHTML = '🏓 Game stopped - press START';
@@ -907,6 +922,10 @@
                     e.preventDefault();
                     startToss();
                 }
+                if (e.code === 'KeyQ') {
+                    e.preventDefault();
+                    switchSides();
+                }
             });
             
             window.addEventListener('keyup', function(e) {
@@ -920,15 +939,8 @@
             
             document.getElementById('btn-start').onclick = startGame;
             document.getElementById('btn-stop').onclick = stopGame;
-            document.getElementById('btn-reset').onclick = function() {
-                resetGame();
-            };
-            
-            // ================================================================
-            // GAME STATE VARIABLES
-            // ================================================================
-            
-            let waitingForServe = true;
+            document.getElementById('btn-switch').onclick = switchSides;
+            document.getElementById('btn-reset').onclick = resetGame;
             
             // ================================================================
             // ANIMATION LOOP
@@ -965,21 +977,11 @@
             });
             
             console.log('========================================');
-            console.log('🏓 TABLE TENNIS - REAL PHYSICS & RULES');
-            console.log('========================================');
-            console.log('');
-            console.log('NEW FEATURES:');
-            console.log('  ✅ DIRECTIONAL CONTROL: Hit left side → ball goes LEFT');
-            console.log('  ✅ Hit right side → ball goes RIGHT');
-            console.log('  ✅ SERVE MUST BOUNCE on opponent\'s side');
-            console.log('  ✅ VISUAL COLLISION: Paddle flashes on hit');
-            console.log('  ✅ Ball trail for visibility');
-            console.log('');
-            console.log('HOW TO PLAY:');
-            console.log('  1. Press E to toss the ball');
-            console.log('  2. Press SPACE to serve/hit');
-            console.log('  3. Move paddle to position');
-            console.log('  4. Where you hit = where ball goes!');
+            console.log('🏓 READY!');
+            console.log('  ✅ RL Module: table-tennis-rl.js (separate file)');
+            console.log('  ✅ Game HTML: table-tennis.html');
+            console.log('  ✅ Press Q to switch sides');
+            console.log('  ✅ Press E to toss, SPACE to serve/hit');
             console.log('========================================');
         })();
     </script>
