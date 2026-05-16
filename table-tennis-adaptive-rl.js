@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table Tennis - Adaptive RL | Fixed Lines</title>
+    <title>Table Tennis - Adaptive RL | Fixed</title>
     <style>
         * {
             margin: 0;
@@ -111,22 +111,6 @@
             50% { opacity: 0.6; }
         }
         
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: #333;
-            border-radius: 3px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ffaa44, #ff6600);
-            width: 0%;
-            transition: width 0.3s;
-        }
-        
         .controls-info {
             position: absolute;
             bottom: 20px;
@@ -160,7 +144,7 @@
         
         <div class="sidebar">
             <h1>🏓 TABLE TENNIS - ADAPTIVE RL</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Version 3 | Fixed Court Lines</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Version 3 | Human vs AI | Fixed Physics</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -192,7 +176,7 @@
             </div>
             
             <h2>🏓 COURT LINES</h2>
-            <div class="tutorial-note" style="background: rgba(255, 170, 68, 0.1); border-left: 3px solid #ffaa44; padding: 8px; margin: 10px 0; font-size: 11px;">
+            <div class="metric" style="background: rgba(255, 170, 68, 0.1); border-left: 3px solid #ffaa44; padding: 8px; margin: 10px 0; font-size: 11px;">
                 <p>✅ Net line: Horizontal across middle (Z=0)</p>
                 <p>✅ Center line: Vertical down the middle (X=0)</p>
                 <p>✅ Sidelines: Left and right boundaries</p>
@@ -202,480 +186,492 @@
     </div>
     
     <div class="controls-info">
-        🏓 <strong>FIXED COURT LINES</strong><br>
+        🏓 <strong>TABLE TENNIS</strong><br>
         🧑 <strong>YOU:</strong> Move paddle with ← → ↑ ↓ | Hit with SPACE<br>
-        🟡 <strong>BALL:</strong> Bright yellow with glow trail<br>
-        📐 <strong>Center line:</strong> Now vertical (X=0) like real table tennis!
+        🟡 <strong>BALL:</strong> Bright yellow with trail effect<br>
+        🤖 <strong>AI:</strong> Simple tracking AI
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     
     <script>
-        (function() {
+        // Wait for DOM to load
+        document.addEventListener('DOMContentLoaded', function() {
             console.log('========================================');
-            console.log('🏓 TABLE TENNIS - FIXED COURT LINES');
+            console.log('🏓 TABLE TENNIS - STARTING');
             console.log('========================================');
             
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // ================================================================
+            // THREE.JS SETUP
+            // ================================================================
+            
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a1a2e);
+            scene.fog = new THREE.FogExp2(0x0a1a2e, 0.008);
+            
+            // Camera - fixed position to see full table
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 7, 13);
+            camera.lookAt(0, 0, 0);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+            
+            // ================================================================
+            // LIGHTS
+            // ================================================================
+            
+            const ambientLight = new THREE.AmbientLight(0x404060);
+            scene.add(ambientLight);
+            
+            const mainLight = new THREE.DirectionalLight(0xfff5e6, 1);
+            mainLight.position.set(5, 10, 3);
+            mainLight.castShadow = true;
+            scene.add(mainLight);
+            
+            const fillLight = new THREE.PointLight(0x4466cc, 0.3);
+            fillLight.position.set(0, 3, 0);
+            scene.add(fillLight);
+            
+            const ballLight = new THREE.PointLight(0xffaa44, 0.5, 5);
+            scene.add(ballLight);
+            
+            // ================================================================
+            // TABLE SURFACE
+            // ================================================================
+            
+            const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a6a3a, roughness: 0.3, metalness: 0.1 });
+            const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 9), tableMat);
+            tableTop.position.set(0, 0, 0);
+            tableTop.receiveShadow = true;
+            tableTop.castShadow = true;
+            scene.add(tableTop);
+            
+            // White line material
+            const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            
+            // ================================================================
+            // COURT LINES
+            // ================================================================
+            
+            // Sidelines (left and right)
+            const leftSideline = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
+            leftSideline.position.set(-2.4, 0.06, 0);
+            scene.add(leftSideline);
+            
+            const rightSideline = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
+            rightSideline.position.set(2.4, 0.06, 0);
+            scene.add(rightSideline);
+            
+            // Baselines (top and bottom)
+            const topBaseline = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
+            topBaseline.position.set(0, 0.06, -4.0);
+            scene.add(topBaseline);
+            
+            const bottomBaseline = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
+            bottomBaseline.position.set(0, 0.06, 4.0);
+            scene.add(bottomBaseline);
+            
+            // Center line (vertical down the middle)
+            const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
+            centerLine.position.set(0, 0.06, 0);
+            scene.add(centerLine);
+            
+            // ================================================================
+            // NET
+            // ================================================================
+            
+            const netMat = new THREE.MeshStandardMaterial({ color: 0xccccaa });
+            const netBar = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.05, 0.05), netMat);
+            netBar.position.set(0, 0.18, 0);
+            scene.add(netBar);
+            
+            // Net posts
+            const postMat = new THREE.MeshStandardMaterial({ color: 0x888866 });
+            const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), postMat);
+            leftPost.position.set(-2.55, 0.25, 0);
+            scene.add(leftPost);
+            
+            const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), postMat);
+            rightPost.position.set(2.55, 0.25, 0);
+            scene.add(rightPost);
+            
+            // ================================================================
+            // PLAYER PADDLE (Blue)
+            // ================================================================
+            
+            const paddleMatBlue = new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5 });
+            const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMatBlue);
+            playerPaddle.position.set(0, 0.5, -3.8);
+            playerPaddle.castShadow = true;
+            scene.add(playerPaddle);
+            
+            // Paddle handle
+            const handleMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const playerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
+            playerHandle.position.set(0, -0.2, 0);
+            playerPaddle.add(playerHandle);
+            
+            // ================================================================
+            // AI PADDLE (Red)
+            // ================================================================
+            
+            const paddleMatRed = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5 });
+            const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMatRed);
+            aiPaddle.position.set(0, 0.5, 3.8);
+            aiPaddle.castShadow = true;
+            scene.add(aiPaddle);
+            
+            const aiHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
+            aiHandle.position.set(0, -0.2, 0);
+            aiPaddle.add(aiHandle);
+            
+            // ================================================================
+            // THE BALL
+            // ================================================================
+            
+            const ballMatYellow = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff4400, emissiveIntensity: 0.3 });
+            const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), ballMatYellow);
+            ball.castShadow = true;
+            scene.add(ball);
+            
+            // Ball trail effect
+            let ballTrail = [];
+            const trailPointsMat = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
+            let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailPointsMat);
+            scene.add(trailPoints);
+            
+            // ================================================================
+            // GAME STATE
+            // ================================================================
+            
+            let ballPos = { x: 0, y: 0.15, z: 0 };
+            let ballVel = { x: 0, y: 0, z: 0 };
+            let playerPaddlePos = { x: 0, y: 0.5 };
+            let aiPaddlePos = { x: 0, y: 0.5 };
+            
+            let playerScore = 0;
+            let aiScore = 0;
+            let gameActive = false;
+            let pointActive = true;
+            let rallyCount = 0;
+            let waitingForServe = true;
+            let serveTimer = 0;
+            
+            // Physics constants
+            const GRAVITY = -14;
+            const BOUNCE_DAMPING = 0.85;
+            
+            // Keyboard state
+            const keys = { 
+                ArrowLeft: false, ArrowRight: false, 
+                ArrowUp: false, ArrowDown: false, 
+                Space: false 
+            };
+            
+            // ================================================================
+            // GAME FUNCTIONS
+            // ================================================================
+            
+            function serve() {
+                const direction = (Math.random() > 0.5 ? 1 : -1);
+                ballPos = { x: direction * (Math.random() * 1.5), y: 0.15, z: -3.6 };
+                ballVel = { 
+                    x: direction * (2 + Math.random() * 2), 
+                    y: 6 + Math.random() * 3, 
+                    z: 10 + Math.random() * 3 
+                };
+                waitingForServe = false;
+                pointActive = true;
+                rallyCount = 0;
+                console.log('🏓 Serve!');
             }
             
-            function init() {
-                const container = document.getElementById('canvas-container');
-                const width = container.clientWidth;
-                const height = container.clientHeight;
+            function resetPoint(winner) {
+                if (winner === 'player') {
+                    playerScore++;
+                    console.log('🏆 You win the point!');
+                } else {
+                    aiScore++;
+                    console.log('🤖 AI wins the point!');
+                }
+                updateUI();
+                waitingForServe = true;
+                pointActive = false;
+                serveTimer = 1.5;
+                ballTrail = [];
+            }
+            
+            function checkScoring() {
+                if (!pointActive) return;
                 
-                // ================================================================
-                // THREE.JS SETUP
-                // ================================================================
+                // Ball hit floor on player side
+                if (ballPos.z < -4.0 && ballVel.z < 0) {
+                    resetPoint('ai');
+                }
+                // Ball hit floor on AI side
+                else if (ballPos.z > 4.0 && ballVel.z > 0) {
+                    resetPoint('player');
+                }
+                // Ball hit net
+                else if (Math.abs(ballPos.z) < 0.2 && ballPos.y < 0.2) {
+                    resetPoint(Math.random() > 0.5 ? 'player' : 'ai');
+                }
+                // Ball out sideways
+                else if (Math.abs(ballPos.x) > 2.8) {
+                    resetPoint(ballVel.x > 0 ? 'ai' : 'player');
+                }
+            }
+            
+            function handlePlayerHit() {
+                if (!pointActive || waitingForServe) return;
                 
-                const scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x0a1a2e);
-                scene.fog = new THREE.FogExp2(0x0a1a2e, 0.008);
+                const distToPaddle = Math.abs(ballPos.z - (-3.8));
+                const hitX = Math.abs(ballPos.x - playerPaddlePos.x);
+                const hitY = Math.abs(ballPos.y - playerPaddlePos.y);
                 
-                // Camera - better angle to see everything
-                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-                camera.position.set(0, 7, 13);
-                camera.lookAt(0, 0, 0);
+                if (distToPaddle < 0.25 && hitX < 0.35 && hitY < 0.45 && ballVel.z < 0) {
+                    // Hit successful
+                    ballVel.x = (ballPos.x - playerPaddlePos.x) * 5 + (Math.random() - 0.5) * 2;
+                    ballVel.y = 5 + Math.random() * 4;
+                    ballVel.z = 12;
+                    rallyCount++;
+                    console.log('🏓 Hit! Rally length:', rallyCount);
+                    
+                    // Flash effect
+                    ballMatYellow.emissiveIntensity = 0.8;
+                    setTimeout(() => { ballMatYellow.emissiveIntensity = 0.3; }, 100);
+                }
+            }
+            
+            function updateAI(delta) {
+                if (!pointActive || waitingForServe) return;
                 
-                const renderer = new THREE.WebGLRenderer({ antialias: true });
-                renderer.setSize(width, height);
-                renderer.shadowMap.enabled = true;
-                container.appendChild(renderer.domElement);
+                // Simple AI: track the ball's position
+                let targetX = Math.max(-2.3, Math.min(2.3, ballPos.x));
+                let targetY = Math.max(0.2, Math.min(1.2, ballPos.y + 0.3));
                 
-                // ================================================================
-                // LIGHTS
-                // ================================================================
+                // Smooth AI movement
+                aiPaddlePos.x += (targetX - aiPaddlePos.x) * 0.15;
+                aiPaddlePos.y += (targetY - aiPaddlePos.y) * 0.15;
+                aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.8);
                 
-                const ambientLight = new THREE.AmbientLight(0x404060);
-                scene.add(ambientLight);
+                // AI hits the ball
+                const distToBall = Math.abs(ballPos.z - 3.8);
+                if (distToBall < 0.25 && ballVel.z > 0) {
+                    const hitX = Math.abs(ballPos.x - aiPaddlePos.x);
+                    const hitY = Math.abs(ballPos.y - aiPaddlePos.y);
+                    
+                    if (hitX < 0.4 && hitY < 0.5) {
+                        // AI hit
+                        ballVel.x = (ballPos.x - aiPaddlePos.x) * 4 + (Math.random() - 0.5) * 3;
+                        ballVel.y = 4 + Math.random() * 4;
+                        ballVel.z = -11;
+                        rallyCount++;
+                        
+                        // Flash effect
+                        paddleMatRed.emissiveIntensity = 0.5;
+                        setTimeout(() => { paddleMatRed.emissiveIntensity = 0; }, 100);
+                    }
+                }
+            }
+            
+            function updatePhysics(delta) {
+                if (!pointActive) return;
                 
-                const mainLight = new THREE.DirectionalLight(0xfff5e6, 1);
-                mainLight.position.set(5, 10, 3);
-                mainLight.castShadow = true;
-                scene.add(mainLight);
+                if (waitingForServe) {
+                    serveTimer -= delta;
+                    if (serveTimer <= 0) {
+                        serve();
+                    }
+                    return;
+                }
                 
-                const fillLight = new THREE.PointLight(0x4466cc, 0.3);
-                fillLight.position.set(0, 3, 0);
-                scene.add(fillLight);
+                // Apply gravity
+                ballVel.y += GRAVITY * delta;
                 
-                const ballLight = new THREE.PointLight(0xffaa44, 0.5, 5);
-                scene.add(ballLight);
+                // Update position
+                ballPos.x += ballVel.x * delta;
+                ballPos.y += ballVel.y * delta;
+                ballPos.z += ballVel.z * delta;
                 
-                // ================================================================
-                // CREATE THE TABLE TENNIS TABLE
-                // ================================================================
+                // Bounce on table surface
+                if (ballPos.y < 0.12 && Math.abs(ballPos.z) < 4.2 && Math.abs(ballPos.x) < 2.5) {
+                    ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                    ballPos.y = 0.12;
+                }
                 
-                // Table surface
-                const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a6a3a, roughness: 0.3, metalness: 0.1 });
-                const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 9), tableMat);
-                tableTop.position.set(0, 0, 0);
-                tableTop.receiveShadow = true;
-                tableTop.castShadow = true;
-                scene.add(tableTop);
+                // Bounce on AI side
+                if (ballPos.y < 0.12 && ballPos.z > 3.9 && ballVel.z > 0) {
+                    ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                    ballPos.y = 0.12;
+                }
                 
-                // White line material
-                const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                // Bounce on player side
+                if (ballPos.y < 0.12 && ballPos.z < -3.9 && ballVel.z < 0) {
+                    ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                    ballPos.y = 0.12;
+                }
                 
-                // ================================================================
-                // COURT LINES - CORRECTLY PLACED
-                // ================================================================
+                // Clamp positions to keep ball in play
+                ballPos.x = Math.max(-2.6, Math.min(2.6, ballPos.x));
+                ballPos.z = Math.max(-4.3, Math.min(4.3, ballPos.z));
                 
-                // SIDELINES (left and right edges - vertical lines)
-                const leftSideline = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
-                leftSideline.position.set(-2.4, 0.06, 0);
-                scene.add(leftSideline);
+                // Update 3D objects
+                ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+                ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
                 
-                const rightSideline = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
-                rightSideline.position.set(2.4, 0.06, 0);
-                scene.add(rightSideline);
+                // Update ball trail
+                ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
+                if (ballTrail.length > 20) ballTrail.pop();
                 
-                // BASELINES (top and bottom edges - horizontal lines)
-                const topBaseline = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
-                topBaseline.position.set(0, 0.06, -4.0);
-                scene.add(topBaseline);
-                
-                const bottomBaseline = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
-                bottomBaseline.position.set(0, 0.06, 4.0);
-                scene.add(bottomBaseline);
-                
-                // ================================================================
-                // CENTER LINE (vertical line down the middle - THIS WAS THE PROBLEM!)
-                // In table tennis, the center line runs from top to bottom (parallel to sidelines)
-                // It separates left and right service boxes
-                // ================================================================
-                
-                const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
-                centerLine.position.set(0, 0.06, 0);
-                scene.add(centerLine);
-                
-                // ================================================================
-                // NET (horizontal across the middle)
-                // ================================================================
-                
-                const netMat = new THREE.MeshStandardMaterial({ color: 0xccccaa });
-                const netBar = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.05, 0.05), netMat);
-                netBar.position.set(0, 0.18, 0);
-                scene.add(netBar);
-                
-                // Net posts
-                const postMat = new THREE.MeshStandardMaterial({ color: 0x888866 });
-                const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), postMat);
-                leftPost.position.set(-2.55, 0.25, 0);
-                scene.add(leftPost);
-                
-                const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), postMat);
-                rightPost.position.set(2.55, 0.25, 0);
-                scene.add(rightPost);
-                
-                // ================================================================
-                // PLAYER PADDLE (Blue)
-                // ================================================================
-                
-                const paddleMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5, emissive: 0x004466 });
-                const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMat);
-                playerPaddle.position.set(0, 0.5, -3.8);
-                playerPaddle.castShadow = true;
-                scene.add(playerPaddle);
-                
-                // Paddle handle
-                const handleMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-                const playerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
-                playerHandle.position.set(0, -0.2, 0);
-                playerPaddle.add(playerHandle);
-                
-                // ================================================================
-                // AI PADDLE (Red)
-                // ================================================================
-                
-                const aiPaddleMat = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5, emissive: 0x442200 });
-                const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), aiPaddleMat);
-                aiPaddle.position.set(0, 0.5, 3.8);
-                aiPaddle.castShadow = true;
-                scene.add(aiPaddle);
-                
-                const aiHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
-                aiHandle.position.set(0, -0.2, 0);
-                aiPaddle.add(aiHandle);
-                
-                // ================================================================
-                // THE BALL
-                // ================================================================
-                
-                const ballMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff4400, emissiveIntensity: 0.3 });
-                const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), ballMat);
-                ball.castShadow = true;
-                scene.add(ball);
-                
-                // Ball trail effect
-                let ballTrail = [];
-                const trailMat = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
-                let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
+                const vertices = [];
+                for (let i = 0; i < ballTrail.length; i++) {
+                    vertices.push(ballTrail[i].x, ballTrail[i].y + 0.05, ballTrail[i].z);
+                }
+                const trailGeo = new THREE.BufferGeometry();
+                trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+                scene.remove(trailPoints);
+                trailPoints = new THREE.Points(trailGeo, trailPointsMat);
                 scene.add(trailPoints);
                 
-                // ================================================================
-                // GAME STATE
-                // ================================================================
-                
-                let ballPos = { x: 0, y: 0.15, z: 0 };
-                let ballVel = { x: 0, y: 0, z: 0 };
-                let playerPaddlePos = { x: 0, y: 0.5 };
-                let aiPaddlePos = { x: 0, y: 0.5 };
-                
-                let playerScore = 0;
-                let aiScore = 0;
-                let gameActive = false;
-                let pointActive = true;
-                let rallyCount = 0;
-                let waitingForServe = true;
-                let serveTimer = 0;
-                
-                // Physics constants
-                const GRAVITY = -14;
-                const BOUNCE_DAMPING = 0.85;
-                
-                // Keyboard state
-                const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, Space: false };
-                
-                // ================================================================
-                // GAME FUNCTIONS
-                // ================================================================
-                
-                function serve() {
-                    const direction = (Math.random() > 0.5 ? 1 : -1);
-                    ballPos = { x: direction * (Math.random() * 1.5), y: 0.15, z: -3.6 };
-                    ballVel = { 
-                        x: direction * (2 + Math.random() * 2), 
-                        y: 6 + Math.random() * 3, 
-                        z: 10 + Math.random() * 3 
-                    };
-                    waitingForServe = false;
-                    pointActive = true;
-                    rallyCount = 0;
-                    console.log('🏓 Serve!');
-                }
-                
-                function resetPoint(winner) {
-                    if (winner === 'player') {
-                        playerScore++;
-                        console.log('🏆 You win the point!');
-                    } else {
-                        aiScore++;
-                        console.log('🤖 AI wins the point!');
-                    }
-                    updateUI();
-                    waitingForServe = true;
-                    pointActive = false;
-                    serveTimer = 1.5;
-                    ballTrail = [];
-                }
-                
-                function checkScoring() {
-                    if (!pointActive) return;
-                    
-                    if (ballPos.z < -4.0 && ballVel.z < 0) {
-                        resetPoint('ai');
-                    }
-                    else if (ballPos.z > 4.0 && ballVel.z > 0) {
-                        resetPoint('player');
-                    }
-                    else if (Math.abs(ballPos.z) < 0.2 && ballPos.y < 0.2) {
-                        resetPoint(Math.random() > 0.5 ? 'player' : 'ai');
-                    }
-                    else if (Math.abs(ballPos.x) > 2.8) {
-                        resetPoint(ballVel.x > 0 ? 'ai' : 'player');
-                    }
-                }
-                
-                function handlePlayerHit() {
-                    if (!pointActive || waitingForServe) return;
-                    
-                    const distToPaddle = Math.abs(ballPos.z - (-3.8));
-                    const hitX = Math.abs(ballPos.x - playerPaddlePos.x);
-                    const hitY = Math.abs(ballPos.y - playerPaddlePos.y);
-                    
-                    if (distToPaddle < 0.25 && hitX < 0.35 && hitY < 0.45 && ballVel.z < 0) {
-                        ballVel.x = (ballPos.x - playerPaddlePos.x) * 5 + (Math.random() - 0.5) * 2;
-                        ballVel.y = 5 + Math.random() * 4;
-                        ballVel.z = 12;
-                        rallyCount++;
-                        console.log('🏓 Hit! Rally length:', rallyCount);
-                        
-                        ballMat.emissiveIntensity = 0.8;
-                        setTimeout(() => { ballMat.emissiveIntensity = 0.3; }, 100);
-                    }
-                }
-                
-                function updateAI(delta, now) {
-                    if (!pointActive || waitingForServe) return;
-                    
-                    let targetX = ballPos.x;
-                    let targetY = Math.min(1.2, Math.max(0.2, ballPos.y + 0.3));
-                    
-                    aiPaddlePos.x += (targetX - aiPaddlePos.x) * 0.12;
-                    aiPaddlePos.y += (targetY - aiPaddlePos.y) * 0.12;
-                    aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.8);
-                    
-                    const distToBall = Math.abs(ballPos.z - 3.8);
-                    if (distToBall < 0.25 && ballVel.z > 0) {
-                        const hitX = Math.abs(ballPos.x - aiPaddlePos.x);
-                        const hitY = Math.abs(ballPos.y - aiPaddlePos.y);
-                        
-                        if (hitX < 0.4 && hitY < 0.5) {
-                            ballVel.x = (ballPos.x - aiPaddlePos.x) * 4 + (Math.random() - 0.5) * 3;
-                            ballVel.y = 4 + Math.random() * 4;
-                            ballVel.z = -11;
-                            rallyCount++;
-                            
-                            aiPaddleMat.emissiveIntensity = 0.5;
-                            setTimeout(() => { aiPaddleMat.emissiveIntensity = 0; }, 100);
-                        }
-                    }
-                }
-                
-                function updatePhysics(delta) {
-                    if (!pointActive) return;
-                    
-                    if (waitingForServe) {
-                        serveTimer -= delta;
-                        if (serveTimer <= 0) serve();
-                        return;
-                    }
-                    
-                    ballVel.y += GRAVITY * delta;
-                    ballPos.x += ballVel.x * delta;
-                    ballPos.y += ballVel.y * delta;
-                    ballPos.z += ballVel.z * delta;
-                    
-                    if (ballPos.y < 0.12 && Math.abs(ballPos.z) < 4.2 && Math.abs(ballPos.x) < 2.5) {
-                        ballVel.y = -ballVel.y * BOUNCE_DAMPING;
-                        ballPos.y = 0.12;
-                    }
-                    
-                    if (ballPos.y < 0.12 && ballPos.z > 3.9 && ballVel.z > 0) {
-                        ballVel.y = -ballVel.y * BOUNCE_DAMPING;
-                        ballPos.y = 0.12;
-                    }
-                    
-                    if (ballPos.y < 0.12 && ballPos.z < -3.9 && ballVel.z < 0) {
-                        ballVel.y = -ballVel.y * BOUNCE_DAMPING;
-                        ballPos.y = 0.12;
-                    }
-                    
-                    ballPos.x = Math.max(-2.6, Math.min(2.6, ballPos.x));
-                    ballPos.z = Math.max(-4.3, Math.min(4.3, ballPos.z));
-                    
-                    ball.position.set(ballPos.x, ballPos.y, ballPos.z);
-                    ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
-                    
-                    ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
-                    if (ballTrail.length > 20) ballTrail.pop();
-                    
-                    const vertices = [];
-                    for (const p of ballTrail) vertices.push(p.x, p.y + 0.05, p.z);
-                    const trailGeo = new THREE.BufferGeometry();
-                    trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-                    scene.remove(trailPoints);
-                    trailPoints = new THREE.Points(trailGeo, trailMat);
-                    scene.add(trailPoints);
-                    
-                    checkScoring();
-                }
-                
-                function updatePlayerPaddle(delta) {
-                    let newX = playerPaddlePos.x;
-                    let newY = playerPaddlePos.y;
-                    
-                    if (keys.ArrowLeft) newX -= 6 * delta;
-                    if (keys.ArrowRight) newX += 6 * delta;
-                    if (keys.ArrowDown) newY -= 5 * delta;
-                    if (keys.ArrowUp) newY += 5 * delta;
-                    
-                    playerPaddlePos.x = Math.max(-2.3, Math.min(2.3, newX));
-                    playerPaddlePos.y = Math.max(0.2, Math.min(1.2, newY));
-                    playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, -3.8);
-                }
-                
-                function updateUI() {
-                    document.getElementById('player-score').textContent = playerScore;
-                    document.getElementById('ai-score').textContent = aiScore;
-                }
-                
-                // ================================================================
-                // EVENT HANDLERS
-                // ================================================================
-                
-                window.addEventListener('keydown', (e) => {
-                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                        keys[e.key] = true;
-                        e.preventDefault();
-                    }
-                    if (e.key === ' ') {
-                        keys.Space = true;
-                        handlePlayerHit();
-                        e.preventDefault();
-                    }
-                });
-                
-                window.addEventListener('keyup', (e) => {
-                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                        keys[e.key] = false;
-                        e.preventDefault();
-                    }
-                    if (e.key === ' ') {
-                        keys.Space = false;
-                        e.preventDefault();
-                    }
-                });
-                
-                document.getElementById('btn-start').onclick = () => {
-                    gameActive = true;
-                    playerScore = 0;
-                    aiScore = 0;
-                    waitingForServe = true;
-                    serveTimer = 1;
-                    pointActive = true;
-                    rallyCount = 0;
-                    ballPos = { x: 0, y: 0.15, z: 0 };
-                    ballVel = { x: 0, y: 0, z: 0 };
-                    playerPaddlePos = { x: 0, y: 0.5 };
-                    aiPaddlePos = { x: 0, y: 0.5 };
-                    ballTrail = [];
-                    updateUI();
-                    document.getElementById('game-status').textContent = "PLAYING";
-                    document.getElementById('game-status').className = 'status-playing';
-                    console.log('🏓 GAME STARTED! Use arrow keys to move paddle, SPACE to hit!');
-                };
-                
-                document.getElementById('btn-reset').onclick = () => {
-                    gameActive = false;
-                    playerScore = 0;
-                    aiScore = 0;
-                    waitingForServe = true;
-                    ballPos = { x: 0, y: 0.15, z: 0 };
-                    ballVel = { x: 0, y: 0, z: 0 };
-                    playerPaddlePos = { x: 0, y: 0.5 };
-                    aiPaddlePos = { x: 0, y: 0.5 };
-                    ballTrail = [];
-                    updateUI();
-                    document.getElementById('game-status').textContent = "Ready";
-                    document.getElementById('game-status').className = 'status-idle';
-                    console.log('🔄 Game reset.');
-                };
-                
-                // ================================================================
-                // ANIMATION LOOP
-                // ================================================================
-                
-                let lastTime = performance.now() / 1000;
-                
-                function animate() {
-                    const now = performance.now() / 1000;
-                    let delta = Math.min(0.033, now - lastTime);
-                    if (delta < 0.01) delta = 0.016;
-                    lastTime = now;
-                    
-                    if (gameActive) {
-                        updatePlayerPaddle(delta);
-                        updateAI(delta, now);
-                        updatePhysics(delta);
-                    }
-                    
-                    playerPaddle.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
-                    aiPaddle.rotation.z = Math.sin(Date.now() * 0.012) * 0.05;
-                    
-                    renderer.render(scene, camera);
-                    requestAnimationFrame(animate);
-                }
-                
-                animate();
-                
-                window.addEventListener('resize', () => {
-                    const w = container.clientWidth;
-                    const h = container.clientHeight;
-                    camera.aspect = w / h;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(w, h);
-                });
-                
-                console.log('========================================');
-                console.log('🏓 TABLE TENNIS - FIXED COURT LINES');
-                console.log('');
-                console.log('COURT LINES (CORRECT):');
-                console.log('  ✅ NET: Horizontal across middle (Z=0)');
-                console.log('  ✅ CENTER LINE: Vertical down middle (X=0)');
-                console.log('  ✅ SIDELINES: Left (X=-2.4) and Right (X=2.4)');
-                console.log('  ✅ BASELINES: Top (Z=-4.0) and Bottom (Z=4.0)');
-                console.log('');
-                console.log('HOW TO PLAY:');
-                console.log('  1. Click START GAME');
-                console.log('  2. Use ← → ↑ ↓ to move paddle');
-                console.log('  3. Press SPACE to hit the ball!');
-                console.log('========================================');
+                checkScoring();
             }
-        })();
+            
+            function updatePlayerPaddle(delta) {
+                let newX = playerPaddlePos.x;
+                let newY = playerPaddlePos.y;
+                
+                if (keys.ArrowLeft) newX -= 6 * delta;
+                if (keys.ArrowRight) newX += 6 * delta;
+                if (keys.ArrowDown) newY -= 5 * delta;
+                if (keys.ArrowUp) newY += 5 * delta;
+                
+                playerPaddlePos.x = Math.max(-2.3, Math.min(2.3, newX));
+                playerPaddlePos.y = Math.max(0.2, Math.min(1.2, newY));
+                playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, -3.8);
+            }
+            
+            function updateUI() {
+                document.getElementById('player-score').textContent = playerScore;
+                document.getElementById('ai-score').textContent = aiScore;
+            }
+            
+            // ================================================================
+            // EVENT HANDLERS
+            // ================================================================
+            
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    keys[e.key] = true;
+                    e.preventDefault();
+                }
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    handlePlayerHit();
+                }
+            });
+            
+            window.addEventListener('keyup', function(e) {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    keys[e.key] = false;
+                    e.preventDefault();
+                }
+            });
+            
+            document.getElementById('btn-start').onclick = function() {
+                gameActive = true;
+                playerScore = 0;
+                aiScore = 0;
+                waitingForServe = true;
+                serveTimer = 1;
+                pointActive = true;
+                rallyCount = 0;
+                ballPos = { x: 0, y: 0.15, z: 0 };
+                ballVel = { x: 0, y: 0, z: 0 };
+                playerPaddlePos = { x: 0, y: 0.5 };
+                aiPaddlePos = { x: 0, y: 0.5 };
+                ballTrail = [];
+                updateUI();
+                document.getElementById('game-status').textContent = "PLAYING";
+                document.getElementById('game-status').className = 'status-playing';
+                console.log('🏓 GAME STARTED! Use arrow keys to move paddle, SPACE to hit!');
+            };
+            
+            document.getElementById('btn-reset').onclick = function() {
+                gameActive = false;
+                playerScore = 0;
+                aiScore = 0;
+                waitingForServe = true;
+                ballPos = { x: 0, y: 0.15, z: 0 };
+                ballVel = { x: 0, y: 0, z: 0 };
+                playerPaddlePos = { x: 0, y: 0.5 };
+                aiPaddlePos = { x: 0, y: 0.5 };
+                ballTrail = [];
+                updateUI();
+                document.getElementById('game-status').textContent = "Ready";
+                document.getElementById('game-status').className = 'status-idle';
+                console.log('🔄 Game reset.');
+            };
+            
+            // ================================================================
+            // ANIMATION LOOP
+            // ================================================================
+            
+            let lastTime = performance.now() / 1000;
+            
+            function animate() {
+                const now = performance.now() / 1000;
+                let delta = Math.min(0.033, now - lastTime);
+                if (delta < 0.01) delta = 0.016;
+                lastTime = now;
+                
+                if (gameActive) {
+                    updatePlayerPaddle(delta);
+                    updateAI(delta);
+                    updatePhysics(delta);
+                }
+                
+                // Subtle paddle animation
+                playerPaddle.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
+                aiPaddle.rotation.z = Math.sin(Date.now() * 0.012) * 0.05;
+                
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+            
+            console.log('========================================');
+            console.log('🏓 TABLE TENNIS READY!');
+            console.log('');
+            console.log('COURT LINES:');
+            console.log('  ✅ Net: Horizontal across middle (Z=0)');
+            console.log('  ✅ Center line: Vertical down middle (X=0)');
+            console.log('  ✅ Sidelines: Left (X=-2.4) and Right (X=2.4)');
+            console.log('  ✅ Baselines: Top (Z=-4.0) and Bottom (Z=4.0)');
+            console.log('');
+            console.log('HOW TO PLAY:');
+            console.log('  1. Click START GAME');
+            console.log('  2. Use ← → ↑ ↓ to move paddle');
+            console.log('  3. Press SPACE to hit the ball!');
+            console.log('========================================');
+        });
     </script>
 </body>
 </html>
