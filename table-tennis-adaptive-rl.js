@@ -1,259 +1,681 @@
-/**
- * ============================================================================
- * TABLE TENNIS - ADAPTIVE REINFORCEMENT LEARNING MODULE
- * ============================================================================
- * 
- * This is Version 3 of our Adaptive RL series.
- * 
- * WHY TABLE TENNIS IS HARDER THAN KING OF THE HILL:
- * ----------------------------------------------------------------------------
- * 
- * King of the Hill (Version 2):
- * - Agent moves in 2D plane
- * - Goal is static between moves
- * - Simple distance-based reward
- * - Agent can just "go to" the hill
- * 
- * Table Tennis (Version 3):
- * - Agent must track a moving ball (3D trajectory!)
- * - Must predict where the ball will land
- * - Timing is critical (hit too early/late = miss)
- * - Continuous action space (paddle position + swing timing)
- * - Ball physics with bounce and spin
- * - Opponent returns ball with different trajectories
- * 
- * ADAPTIVE CHALLENGES IN TABLE TENNIS:
- * ----------------------------------------------------------------------------
- * - Ball speed changes based on hit power
- * - Opponent learns your patterns (where you hit)
- * - Spin adds curve to ball trajectory
- * - Must adapt to different shot types (smash, lob, topspin, backspin)
- * 
- * ============================================================================
- * STATE SPACE (What the agent sees):
- * ----------------------------------------------------------------------------
- * - ballX, ballY, ballZ     : Ball position in 3D space
- * - ballVx, ballVy, ballVz  : Ball velocity (speed and direction)
- * - paddleX, paddleY        : AI paddle position
- * - opponentPaddleX         : Player paddle position (to predict)
- * - ballLandingX, ballLandingZ : Predicted landing position
- * - timeToHit               : Frames until ball reaches paddle
- * - lastHitType             : What shot was last played
- * - rallyLength             : How many hits in current rally
- * 
- * ACTION SPACE (What the agent can do):
- * ----------------------------------------------------------------------------
- * - moveLeft/Right          : Horizontal paddle movement
- * - moveUp/Down             : Vertical paddle movement
- * - hitFlat                 : Standard return (no spin)
- * - hitTopspin              : Ball dips faster after bounce
- * - hitBackspin             : Ball floats and stays low
- * - hitSmash                : Powerful fast shot
- * - hitLob                  : High, deep defensive shot
- * 
- * REWARD STRUCTURE:
- * ----------------------------------------------------------------------------
- * - Win rally               : +1.0
- * - Lose rally              : -1.0
- * - Hit ball over net       : +0.1
- * - Force opponent error    : +0.2
- * - Make unforced error     : -0.3
- * - Hit to corner           : +0.05
- * - Return with spin        : +0.05
- * 
- * ============================================================================
- */
-
-class TableTennisAgent {
-    /**
-     * Creates a DQN agent for table tennis
-     * Neural network: 14 inputs → 128 → 128 → 64 → 7 outputs
-     * (Larger network because table tennis is more complex)
-     */
-    constructor(config = {}) {
-        // Learning parameters
-        this.epsilon = config.epsilon || 0.3;
-        this.episodes = 0;
-        this.memory = [];
-        this.memorySize = config.memorySize || 5000;
-        
-        // Table tennis specific parameters
-        this.learningStyle = "balanced";  // aggressive, defensive, balanced
-        this.weakSpot = "backhand";       // Where opponent misses most
-        this.rallyCount = 0;
-        
-        // Build larger neural network for complex table tennis
-        this.model = tf.sequential();
-        
-        // Input layer: 14 features
-        this.model.add(tf.layers.dense({ 
-            units: 128, 
-            activation: 'relu', 
-            inputShape: [14] 
-        }));
-        
-        // Hidden layer 2
-        this.model.add(tf.layers.dense({ 
-            units: 128, 
-            activation: 'relu' 
-        }));
-        
-        // Hidden layer 3
-        this.model.add(tf.layers.dense({ 
-            units: 64, 
-            activation: 'relu' 
-        }));
-        
-        // Output layer: 7 actions
-        this.model.add(tf.layers.dense({ 
-            units: 7, 
-            activation: 'linear' 
-        }));
-        
-        this.model.compile({ 
-            optimizer: 'adam', 
-            loss: 'meanSquaredError' 
-        });
-        
-        console.log('🏓 Table Tennis DQN Agent Initialized');
-        console.log('   Network: 14 → 128 → 128 → 64 → 7');
-        console.log('   Exploration rate (ε):', this.epsilon);
-        console.log('   Memory size:', this.memorySize);
-    }
-    
-    /**
-     * Get observation from game state
-     * 14 features for table tennis:
-     * 0-2: Ball position (x, y, z)
-     * 3-5: Ball velocity (vx, vy, vz)
-     * 6-7: AI paddle position (x, y)
-     * 8:   Opponent paddle X position
-     * 9-10: Predicted landing position
-     * 11:  Time to hit (frames)
-     * 12:  Last hit type (encoded)
-     * 13:  Rally length (normalized)
-     */
-    getObservation(ball, ballVel, aiPaddle, opponentPaddle, predictedLanding, timeToHit, lastHitType, rallyLength) {
-        return [
-            ball.x / 5, ball.y / 3, ball.z / 10,           // Ball position (normalized)
-            ballVel.x / 20, ballVel.y / 15, ballVel.z / 20, // Ball velocity
-            aiPaddle.x / 2, aiPaddle.y / 2,                 // AI paddle position
-            opponentPaddle.x / 2,                           // Opponent paddle X
-            predictedLanding.x / 5, predictedLanding.z / 5, // Landing prediction
-            Math.min(1, timeToHit / 30),                    // Time to hit (normalized)
-            lastHitType / 6,                                // Hit type (0-1)
-            Math.min(1, rallyLength / 20)                   // Rally length
-        ];
-    }
-    
-    /**
-     * Get action using epsilon-greedy
-     * Actions: 0=moveLeft, 1=moveRight, 2=moveUp, 3=moveDown, 
-     *          4=hitFlat, 5=hitTopspin, 6=hitBackspin, 7=hitSmash, 8=hitLob
-     */
-    async getAction(observation) {
-        const input = tf.tensor2d([observation], [1, 14]);
-        const qValues = this.model.predict(input);
-        const values = await qValues.data();
-        
-        input.dispose();
-        qValues.dispose();
-        
-        if (Math.random() < this.epsilon) {
-            return Math.floor(Math.random() * 9);  // 9 actions
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Tennis - Adaptive RL | Fixed Lines</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        return values.indexOf(Math.max(...values));
-    }
-    
-    /**
-     * Train on experience
-     */
-    async train(obs, action, reward, nextObs, done) {
-        this.memory.push({ obs, action, reward, nextObs, done });
-        if (this.memory.length > this.memorySize) this.memory.shift();
-        if (this.memory.length < 64) return;  // Need larger batch for complex game
         
-        // Sample batch of 64 experiences
-        const batch = [];
-        const indices = new Set();
-        while (indices.size < 64) {
-            indices.add(Math.floor(Math.random() * this.memory.length));
+        body {
+            font-family: 'Segoe UI', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0a1a2e 100%);
+            color: white;
+            overflow: hidden;
         }
-        for (const idx of indices) batch.push(this.memory[idx]);
         
-        const states = batch.map(e => e.obs);
-        const nextStates = batch.map(e => e.nextObs);
+        .container {
+            display: flex;
+            height: 100vh;
+        }
         
-        const currentQTensor = this.model.predict(tf.tensor2d(states, [64, 14]));
-        const currentQ = await currentQTensor.array();
-        const nextQTensor = this.model.predict(tf.tensor2d(nextStates, [64, 14]));
-        const nextQ = await nextQTensor.array();
+        #canvas-container {
+            flex: 3;
+            position: relative;
+            background: #0a1a2e;
+            cursor: none;
+        }
         
-        const targets = [];
-        for (let i = 0; i < 64; i++) {
-            const target = [...currentQ[i]];
-            const a = batch[i].action;
-            const r = batch[i].reward;
-            const d = batch[i].done;
+        .sidebar {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+        
+        h1 { font-size: 1.5rem; margin-bottom: 10px; color: #ffaa44; }
+        h2 { font-size: 1.1rem; margin: 15px 0 10px 0; color: #88aaff; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
+        
+        .metric {
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .metric-label { color: #aaa; }
+        .metric-value { color: #ffaa44; font-weight: bold; font-size: 1.2rem; }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .player-score {
+            background: rgba(68, 170, 255, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            flex: 1;
+            margin: 0 5px;
+        }
+        
+        .ai-score {
+            background: rgba(255, 68, 68, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            flex: 1;
+            margin: 0 5px;
+        }
+        
+        .score-number {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #ffaa44, #ff6600);
+            border: none;
+            color: #1a1a2e;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover { transform: scale(1.02); }
+        .button-secondary { background: linear-gradient(135deg, #444, #222); color: white; }
+        
+        .status-playing { background: #00aa44; animation: pulse 1s infinite; }
+        .status-idle { background: #666; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa44, #ff6600);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .controls-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            font-family: monospace;
+            border: 1px solid #ffaa44;
+        }
+        
+        .controls-info kbd {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #ffaa44;
+        }
+        
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #222; }
+        .sidebar::-webkit-scrollbar-thumb { background: #ffaa44; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="canvas-container"></div>
+        
+        <div class="sidebar">
+            <h1>🏓 TABLE TENNIS - ADAPTIVE RL</h1>
+            <p style="font-size: 12px; margin-bottom: 15px;">Version 3 | Fixed Court Lines</p>
             
-            if (d) {
-                target[a] = r;
-            } else {
-                target[a] = r + 0.95 * Math.max(...nextQ[i]);
-            }
-            targets.push(target);
-        }
-        
-        const xs = tf.tensor2d(states, [64, 14]);
-        const ys = tf.tensor2d(targets, [64, 9]);
-        await this.model.fit(xs, ys, { epochs: 1, verbose: 0 });
-        
-        xs.dispose();
-        ys.dispose();
-        currentQTensor.dispose();
-        nextQTensor.dispose();
-        
-        this.epsilon = Math.max(0.05, this.epsilon * 0.995);
-    }
+            <div class="metric">
+                <div class="metric-row">
+                    <span class="metric-label">Game Status:</span>
+                    <span class="metric-value" id="game-status">Ready</span>
+                </div>
+                <div class="score-board">
+                    <div class="player-score">
+                        <div>🧑 YOU</div>
+                        <div class="score-number" id="player-score">0</div>
+                    </div>
+                    <div class="ai-score">
+                        <div>🤖 AI</div>
+                        <div class="score-number" id="ai-score">0</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="button" id="btn-start">▶ Start Game</button>
+                    <button class="button button-secondary" id="btn-reset">🔄 Reset</button>
+                </div>
+            </div>
+            
+            <h2>🎮 CONTROLS</h2>
+            <div class="metric" style="font-size: 12px; line-height: 1.8;">
+                <p><kbd>←</kbd> <kbd>→</kbd> - Move paddle LEFT/RIGHT</p>
+                <p><kbd>↑</kbd> <kbd>↓</kbd> - Move paddle UP/DOWN</p>
+                <p><kbd>SPACE</kbd> - Hit the ball!</p>
+                <p style="margin-top: 10px; color: #ffaa44;">🎯 Hit the ball over the net to score!</p>
+            </div>
+            
+            <h2>🏓 COURT LINES</h2>
+            <div class="tutorial-note" style="background: rgba(255, 170, 68, 0.1); border-left: 3px solid #ffaa44; padding: 8px; margin: 10px 0; font-size: 11px;">
+                <p>✅ Net line: Horizontal across middle (Z=0)</p>
+                <p>✅ Center line: Vertical down the middle (X=0)</p>
+                <p>✅ Sidelines: Left and right boundaries</p>
+                <p>✅ Baselines: Top and bottom boundaries</p>
+            </div>
+        </div>
+    </div>
     
-    /**
-     * Adaptive strategy based on opponent patterns
-     */
-    adaptStrategy(opponentPattern) {
-        if (opponentPattern.hitsToLeft > 0.6) {
-            this.weakSpot = "left";
-            this.learningStyle = "aggressive";
-        } else if (opponentPattern.hitsToRight > 0.6) {
-            this.weakSpot = "right";
-            this.learningStyle = "aggressive";
-        } else if (opponentPattern.smashCount > 10) {
-            this.learningStyle = "defensive";
-            this.weakSpot = "deep";
-        } else {
-            this.learningStyle = "balanced";
-        }
-    }
-    
-    incrementEpisode() {
-        this.episodes++;
-        this.updateUI();
-    }
-    
-    updateUI() {
-        const epsilonEl = document.getElementById('epsilon');
-        const episodesEl = document.getElementById('train-episodes');
-        const memoryEl = document.getElementById('memory');
-        const styleEl = document.getElementById('ai-style');
-        
-        if (epsilonEl) epsilonEl.textContent = this.epsilon.toFixed(3);
-        if (episodesEl) episodesEl.textContent = this.episodes;
-        if (memoryEl) memoryEl.textContent = this.memory.length;
-        if (styleEl) styleEl.textContent = this.learningStyle;
-    }
-    
-    getEpsilon() {
-        return this.epsilon;
-    }
-}
+    <div class="controls-info">
+        🏓 <strong>FIXED COURT LINES</strong><br>
+        🧑 <strong>YOU:</strong> Move paddle with ← → ↑ ↓ | Hit with SPACE<br>
+        🟡 <strong>BALL:</strong> Bright yellow with glow trail<br>
+        📐 <strong>Center line:</strong> Now vertical (X=0) like real table tennis!
+    </div>
 
-window.TableTennisAgent = TableTennisAgent;
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    
+    <script>
+        (function() {
+            console.log('========================================');
+            console.log('🏓 TABLE TENNIS - FIXED COURT LINES');
+            console.log('========================================');
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+            
+            function init() {
+                const container = document.getElementById('canvas-container');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                // ================================================================
+                // THREE.JS SETUP
+                // ================================================================
+                
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a1a2e);
+                scene.fog = new THREE.FogExp2(0x0a1a2e, 0.008);
+                
+                // Camera - better angle to see everything
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+                camera.position.set(0, 7, 13);
+                camera.lookAt(0, 0, 0);
+                
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(width, height);
+                renderer.shadowMap.enabled = true;
+                container.appendChild(renderer.domElement);
+                
+                // ================================================================
+                // LIGHTS
+                // ================================================================
+                
+                const ambientLight = new THREE.AmbientLight(0x404060);
+                scene.add(ambientLight);
+                
+                const mainLight = new THREE.DirectionalLight(0xfff5e6, 1);
+                mainLight.position.set(5, 10, 3);
+                mainLight.castShadow = true;
+                scene.add(mainLight);
+                
+                const fillLight = new THREE.PointLight(0x4466cc, 0.3);
+                fillLight.position.set(0, 3, 0);
+                scene.add(fillLight);
+                
+                const ballLight = new THREE.PointLight(0xffaa44, 0.5, 5);
+                scene.add(ballLight);
+                
+                // ================================================================
+                // CREATE THE TABLE TENNIS TABLE
+                // ================================================================
+                
+                // Table surface
+                const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a6a3a, roughness: 0.3, metalness: 0.1 });
+                const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 9), tableMat);
+                tableTop.position.set(0, 0, 0);
+                tableTop.receiveShadow = true;
+                tableTop.castShadow = true;
+                scene.add(tableTop);
+                
+                // White line material
+                const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                
+                // ================================================================
+                // COURT LINES - CORRECTLY PLACED
+                // ================================================================
+                
+                // SIDELINES (left and right edges - vertical lines)
+                const leftSideline = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
+                leftSideline.position.set(-2.4, 0.06, 0);
+                scene.add(leftSideline);
+                
+                const rightSideline = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
+                rightSideline.position.set(2.4, 0.06, 0);
+                scene.add(rightSideline);
+                
+                // BASELINES (top and bottom edges - horizontal lines)
+                const topBaseline = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
+                topBaseline.position.set(0, 0.06, -4.0);
+                scene.add(topBaseline);
+                
+                const bottomBaseline = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 0.05), lineMat);
+                bottomBaseline.position.set(0, 0.06, 4.0);
+                scene.add(bottomBaseline);
+                
+                // ================================================================
+                // CENTER LINE (vertical line down the middle - THIS WAS THE PROBLEM!)
+                // In table tennis, the center line runs from top to bottom (parallel to sidelines)
+                // It separates left and right service boxes
+                // ================================================================
+                
+                const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 8.6), lineMat);
+                centerLine.position.set(0, 0.06, 0);
+                scene.add(centerLine);
+                
+                // ================================================================
+                // NET (horizontal across the middle)
+                // ================================================================
+                
+                const netMat = new THREE.MeshStandardMaterial({ color: 0xccccaa });
+                const netBar = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.05, 0.05), netMat);
+                netBar.position.set(0, 0.18, 0);
+                scene.add(netBar);
+                
+                // Net posts
+                const postMat = new THREE.MeshStandardMaterial({ color: 0x888866 });
+                const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), postMat);
+                leftPost.position.set(-2.55, 0.25, 0);
+                scene.add(leftPost);
+                
+                const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), postMat);
+                rightPost.position.set(2.55, 0.25, 0);
+                scene.add(rightPost);
+                
+                // ================================================================
+                // PLAYER PADDLE (Blue)
+                // ================================================================
+                
+                const paddleMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5, emissive: 0x004466 });
+                const playerPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), paddleMat);
+                playerPaddle.position.set(0, 0.5, -3.8);
+                playerPaddle.castShadow = true;
+                scene.add(playerPaddle);
+                
+                // Paddle handle
+                const handleMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                const playerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
+                playerHandle.position.set(0, -0.2, 0);
+                playerPaddle.add(playerHandle);
+                
+                // ================================================================
+                // AI PADDLE (Red)
+                // ================================================================
+                
+                const aiPaddleMat = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5, emissive: 0x442200 });
+                const aiPaddle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.08), aiPaddleMat);
+                aiPaddle.position.set(0, 0.5, 3.8);
+                aiPaddle.castShadow = true;
+                scene.add(aiPaddle);
+                
+                const aiHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), handleMat);
+                aiHandle.position.set(0, -0.2, 0);
+                aiPaddle.add(aiHandle);
+                
+                // ================================================================
+                // THE BALL
+                // ================================================================
+                
+                const ballMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff4400, emissiveIntensity: 0.3 });
+                const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), ballMat);
+                ball.castShadow = true;
+                scene.add(ball);
+                
+                // Ball trail effect
+                let ballTrail = [];
+                const trailMat = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
+                let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
+                scene.add(trailPoints);
+                
+                // ================================================================
+                // GAME STATE
+                // ================================================================
+                
+                let ballPos = { x: 0, y: 0.15, z: 0 };
+                let ballVel = { x: 0, y: 0, z: 0 };
+                let playerPaddlePos = { x: 0, y: 0.5 };
+                let aiPaddlePos = { x: 0, y: 0.5 };
+                
+                let playerScore = 0;
+                let aiScore = 0;
+                let gameActive = false;
+                let pointActive = true;
+                let rallyCount = 0;
+                let waitingForServe = true;
+                let serveTimer = 0;
+                
+                // Physics constants
+                const GRAVITY = -14;
+                const BOUNCE_DAMPING = 0.85;
+                
+                // Keyboard state
+                const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, Space: false };
+                
+                // ================================================================
+                // GAME FUNCTIONS
+                // ================================================================
+                
+                function serve() {
+                    const direction = (Math.random() > 0.5 ? 1 : -1);
+                    ballPos = { x: direction * (Math.random() * 1.5), y: 0.15, z: -3.6 };
+                    ballVel = { 
+                        x: direction * (2 + Math.random() * 2), 
+                        y: 6 + Math.random() * 3, 
+                        z: 10 + Math.random() * 3 
+                    };
+                    waitingForServe = false;
+                    pointActive = true;
+                    rallyCount = 0;
+                    console.log('🏓 Serve!');
+                }
+                
+                function resetPoint(winner) {
+                    if (winner === 'player') {
+                        playerScore++;
+                        console.log('🏆 You win the point!');
+                    } else {
+                        aiScore++;
+                        console.log('🤖 AI wins the point!');
+                    }
+                    updateUI();
+                    waitingForServe = true;
+                    pointActive = false;
+                    serveTimer = 1.5;
+                    ballTrail = [];
+                }
+                
+                function checkScoring() {
+                    if (!pointActive) return;
+                    
+                    if (ballPos.z < -4.0 && ballVel.z < 0) {
+                        resetPoint('ai');
+                    }
+                    else if (ballPos.z > 4.0 && ballVel.z > 0) {
+                        resetPoint('player');
+                    }
+                    else if (Math.abs(ballPos.z) < 0.2 && ballPos.y < 0.2) {
+                        resetPoint(Math.random() > 0.5 ? 'player' : 'ai');
+                    }
+                    else if (Math.abs(ballPos.x) > 2.8) {
+                        resetPoint(ballVel.x > 0 ? 'ai' : 'player');
+                    }
+                }
+                
+                function handlePlayerHit() {
+                    if (!pointActive || waitingForServe) return;
+                    
+                    const distToPaddle = Math.abs(ballPos.z - (-3.8));
+                    const hitX = Math.abs(ballPos.x - playerPaddlePos.x);
+                    const hitY = Math.abs(ballPos.y - playerPaddlePos.y);
+                    
+                    if (distToPaddle < 0.25 && hitX < 0.35 && hitY < 0.45 && ballVel.z < 0) {
+                        ballVel.x = (ballPos.x - playerPaddlePos.x) * 5 + (Math.random() - 0.5) * 2;
+                        ballVel.y = 5 + Math.random() * 4;
+                        ballVel.z = 12;
+                        rallyCount++;
+                        console.log('🏓 Hit! Rally length:', rallyCount);
+                        
+                        ballMat.emissiveIntensity = 0.8;
+                        setTimeout(() => { ballMat.emissiveIntensity = 0.3; }, 100);
+                    }
+                }
+                
+                function updateAI(delta, now) {
+                    if (!pointActive || waitingForServe) return;
+                    
+                    let targetX = ballPos.x;
+                    let targetY = Math.min(1.2, Math.max(0.2, ballPos.y + 0.3));
+                    
+                    aiPaddlePos.x += (targetX - aiPaddlePos.x) * 0.12;
+                    aiPaddlePos.y += (targetY - aiPaddlePos.y) * 0.12;
+                    aiPaddle.position.set(aiPaddlePos.x, aiPaddlePos.y, 3.8);
+                    
+                    const distToBall = Math.abs(ballPos.z - 3.8);
+                    if (distToBall < 0.25 && ballVel.z > 0) {
+                        const hitX = Math.abs(ballPos.x - aiPaddlePos.x);
+                        const hitY = Math.abs(ballPos.y - aiPaddlePos.y);
+                        
+                        if (hitX < 0.4 && hitY < 0.5) {
+                            ballVel.x = (ballPos.x - aiPaddlePos.x) * 4 + (Math.random() - 0.5) * 3;
+                            ballVel.y = 4 + Math.random() * 4;
+                            ballVel.z = -11;
+                            rallyCount++;
+                            
+                            aiPaddleMat.emissiveIntensity = 0.5;
+                            setTimeout(() => { aiPaddleMat.emissiveIntensity = 0; }, 100);
+                        }
+                    }
+                }
+                
+                function updatePhysics(delta) {
+                    if (!pointActive) return;
+                    
+                    if (waitingForServe) {
+                        serveTimer -= delta;
+                        if (serveTimer <= 0) serve();
+                        return;
+                    }
+                    
+                    ballVel.y += GRAVITY * delta;
+                    ballPos.x += ballVel.x * delta;
+                    ballPos.y += ballVel.y * delta;
+                    ballPos.z += ballVel.z * delta;
+                    
+                    if (ballPos.y < 0.12 && Math.abs(ballPos.z) < 4.2 && Math.abs(ballPos.x) < 2.5) {
+                        ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                        ballPos.y = 0.12;
+                    }
+                    
+                    if (ballPos.y < 0.12 && ballPos.z > 3.9 && ballVel.z > 0) {
+                        ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                        ballPos.y = 0.12;
+                    }
+                    
+                    if (ballPos.y < 0.12 && ballPos.z < -3.9 && ballVel.z < 0) {
+                        ballVel.y = -ballVel.y * BOUNCE_DAMPING;
+                        ballPos.y = 0.12;
+                    }
+                    
+                    ballPos.x = Math.max(-2.6, Math.min(2.6, ballPos.x));
+                    ballPos.z = Math.max(-4.3, Math.min(4.3, ballPos.z));
+                    
+                    ball.position.set(ballPos.x, ballPos.y, ballPos.z);
+                    ballLight.position.set(ballPos.x, ballPos.y + 0.2, ballPos.z);
+                    
+                    ballTrail.unshift({ x: ballPos.x, y: ballPos.y, z: ballPos.z });
+                    if (ballTrail.length > 20) ballTrail.pop();
+                    
+                    const vertices = [];
+                    for (const p of ballTrail) vertices.push(p.x, p.y + 0.05, p.z);
+                    const trailGeo = new THREE.BufferGeometry();
+                    trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+                    scene.remove(trailPoints);
+                    trailPoints = new THREE.Points(trailGeo, trailMat);
+                    scene.add(trailPoints);
+                    
+                    checkScoring();
+                }
+                
+                function updatePlayerPaddle(delta) {
+                    let newX = playerPaddlePos.x;
+                    let newY = playerPaddlePos.y;
+                    
+                    if (keys.ArrowLeft) newX -= 6 * delta;
+                    if (keys.ArrowRight) newX += 6 * delta;
+                    if (keys.ArrowDown) newY -= 5 * delta;
+                    if (keys.ArrowUp) newY += 5 * delta;
+                    
+                    playerPaddlePos.x = Math.max(-2.3, Math.min(2.3, newX));
+                    playerPaddlePos.y = Math.max(0.2, Math.min(1.2, newY));
+                    playerPaddle.position.set(playerPaddlePos.x, playerPaddlePos.y, -3.8);
+                }
+                
+                function updateUI() {
+                    document.getElementById('player-score').textContent = playerScore;
+                    document.getElementById('ai-score').textContent = aiScore;
+                }
+                
+                // ================================================================
+                // EVENT HANDLERS
+                // ================================================================
+                
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                        keys[e.key] = true;
+                        e.preventDefault();
+                    }
+                    if (e.key === ' ') {
+                        keys.Space = true;
+                        handlePlayerHit();
+                        e.preventDefault();
+                    }
+                });
+                
+                window.addEventListener('keyup', (e) => {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                        keys[e.key] = false;
+                        e.preventDefault();
+                    }
+                    if (e.key === ' ') {
+                        keys.Space = false;
+                        e.preventDefault();
+                    }
+                });
+                
+                document.getElementById('btn-start').onclick = () => {
+                    gameActive = true;
+                    playerScore = 0;
+                    aiScore = 0;
+                    waitingForServe = true;
+                    serveTimer = 1;
+                    pointActive = true;
+                    rallyCount = 0;
+                    ballPos = { x: 0, y: 0.15, z: 0 };
+                    ballVel = { x: 0, y: 0, z: 0 };
+                    playerPaddlePos = { x: 0, y: 0.5 };
+                    aiPaddlePos = { x: 0, y: 0.5 };
+                    ballTrail = [];
+                    updateUI();
+                    document.getElementById('game-status').textContent = "PLAYING";
+                    document.getElementById('game-status').className = 'status-playing';
+                    console.log('🏓 GAME STARTED! Use arrow keys to move paddle, SPACE to hit!');
+                };
+                
+                document.getElementById('btn-reset').onclick = () => {
+                    gameActive = false;
+                    playerScore = 0;
+                    aiScore = 0;
+                    waitingForServe = true;
+                    ballPos = { x: 0, y: 0.15, z: 0 };
+                    ballVel = { x: 0, y: 0, z: 0 };
+                    playerPaddlePos = { x: 0, y: 0.5 };
+                    aiPaddlePos = { x: 0, y: 0.5 };
+                    ballTrail = [];
+                    updateUI();
+                    document.getElementById('game-status').textContent = "Ready";
+                    document.getElementById('game-status').className = 'status-idle';
+                    console.log('🔄 Game reset.');
+                };
+                
+                // ================================================================
+                // ANIMATION LOOP
+                // ================================================================
+                
+                let lastTime = performance.now() / 1000;
+                
+                function animate() {
+                    const now = performance.now() / 1000;
+                    let delta = Math.min(0.033, now - lastTime);
+                    if (delta < 0.01) delta = 0.016;
+                    lastTime = now;
+                    
+                    if (gameActive) {
+                        updatePlayerPaddle(delta);
+                        updateAI(delta, now);
+                        updatePhysics(delta);
+                    }
+                    
+                    playerPaddle.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
+                    aiPaddle.rotation.z = Math.sin(Date.now() * 0.012) * 0.05;
+                    
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(animate);
+                }
+                
+                animate();
+                
+                window.addEventListener('resize', () => {
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                });
+                
+                console.log('========================================');
+                console.log('🏓 TABLE TENNIS - FIXED COURT LINES');
+                console.log('');
+                console.log('COURT LINES (CORRECT):');
+                console.log('  ✅ NET: Horizontal across middle (Z=0)');
+                console.log('  ✅ CENTER LINE: Vertical down middle (X=0)');
+                console.log('  ✅ SIDELINES: Left (X=-2.4) and Right (X=2.4)');
+                console.log('  ✅ BASELINES: Top (Z=-4.0) and Bottom (Z=4.0)');
+                console.log('');
+                console.log('HOW TO PLAY:');
+                console.log('  1. Click START GAME');
+                console.log('  2. Use ← → ↑ ↓ to move paddle');
+                console.log('  3. Press SPACE to hit the ball!');
+                console.log('========================================');
+            }
+        })();
+    </script>
+</body>
+</html>
