@@ -142,4 +142,4 @@ Version 2 uses a **Neural Network** to approximate Q-values instead of storing t
 Both versions share the same adaptive environment:
 
 ### Dynamic Goal Repositioning
-![Game Screenshot](https://raw.githubusercontent.com/citrudevmobile/adaptive-gym-env-demo/Screenshot From 2026-05-16
+![Game Screenshot](https://github.com/citrudevmobile/adaptive-gym-env-demo/blob/8b760148c77edb8b289189abae170451cb00e678/Screenshot%20From%202026-05-16%2017-21-26.png)
