@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lawn Tennis - Adaptive RL | Clean Version</title>
+    <title>Lawn Tennis - Adaptive RL | Red & Blue Bats</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -55,7 +55,6 @@
         .serve-indicator { background: rgba(0,0,0,0.7); padding: 8px; border-radius: 20px; font-size: 12px; text-align: center; margin-top: 10px; }
         .power-meter { width: 100%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin: 10px 0; }
         .power-fill { height: 100%; background: linear-gradient(90deg, #44ff44, #ffaa44, #ff4444); width: 0%; transition: width 0.01s linear; }
-        .rule-badge { background: #ffaa4422; border-left: 3px solid #ffaa44; padding: 5px 8px; margin: 5px 0; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -63,7 +62,7 @@
         <div id="canvas-container"></div>
         <div class="sidebar">
             <h1>🎾 LAWN TENNIS - ADAPTIVE RL</h1>
-            <p style="font-size: 12px; margin-bottom: 15px;">Clean Graphics | Smooth Gameplay | Real Physics</p>
+            <p style="font-size: 12px; margin-bottom: 15px;">Red vs Blue Bats | Real Tennis Rules</p>
             
             <div class="metric">
                 <div class="metric-row">
@@ -72,12 +71,12 @@
                 </div>
                 <div class="score-board">
                     <div class="player-score">
-                        <div>🧑 YOU</div>
+                        <div>🔵 YOU (Blue)</div>
                         <div class="score-number" id="player-points">0</div>
                         <div class="game-score" id="player-games">Games: 0</div>
                     </div>
                     <div class="ai-score">
-                        <div>🤖 AI</div>
+                        <div>🔴 AI (Red)</div>
                         <div class="score-number" id="ai-points">0</div>
                         <div class="game-score" id="ai-games">Games: 0</div>
                     </div>
@@ -102,29 +101,29 @@
             
             <h2>🎾 RULES</h2>
             <div class="metric">
-                <div class="rule-badge">✅ Two serves per point</div>
-                <div class="rule-badge">✅ Scoring: 15, 30, 40, Game</div>
-                <div class="rule-badge">✅ Deuce at 40-40 | Advantage</div>
-                <div class="rule-badge">✅ First to 6 games, win by 2</div>
+                <p>✅ Two serves per point</p>
+                <p>✅ Scoring: 15, 30, 40, Game</p>
+                <p>✅ Deuce at 40-40 | Advantage</p>
+                <p>✅ First to 6 games, win by 2</p>
             </div>
         </div>
     </div>
     
     <div class="controls-info">
-        🎾 <strong>CLEAN VERSION - NO STUCK BALL</strong><br>
-        🧑 YOU: Blue circle | ← → ↑ ↓ to move<br>
-        🎯 HOLD SPACE to charge, RELEASE to serve/hit!<br>
-        🤖 RED AI: Moves to return the ball
+        🎾 <strong>RED vs BLUE BATS</strong><br>
+        🔵 YOU: Blue bat | ← → ↑ ↓ to move<br>
+        🔴 AI: Red bat | Moves automatically<br>
+        🎯 HOLD SPACE to charge, RELEASE to serve/hit!
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     
     <script>
         // ================================================================
-        // THREE.JS SETUP - CLEAN AND SIMPLE
+        // THREE.JS SETUP
         // ================================================================
         
-        console.log('Starting Lawn Tennis Game - Clean Version...');
+        console.log('Lawn Tennis - Red vs Blue Bats...');
         
         const container = document.getElementById('canvas-container');
         let width = container.clientWidth;
@@ -164,7 +163,6 @@
         // Lines (White)
         const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         
-        // Baselines
         const blBottom = new THREE.Mesh(new THREE.BoxGeometry(10.97, 0.03, 0.05), lineMat);
         blBottom.position.set(0, 0, -11.4);
         scene.add(blBottom);
@@ -172,7 +170,6 @@
         blTop.position.set(0, 0, 11.4);
         scene.add(blTop);
         
-        // Sidelines
         const leftLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 22.8), lineMat);
         leftLine.position.set(-5.48, 0, 0);
         scene.add(leftLine);
@@ -180,7 +177,6 @@
         rightLine.position.set(5.48, 0, 0);
         scene.add(rightLine);
         
-        // Service lines
         const svcBottom = new THREE.Mesh(new THREE.BoxGeometry(10.97, 0.03, 0.05), lineMat);
         svcBottom.position.set(0, 0, -6.4);
         scene.add(svcBottom);
@@ -188,7 +184,6 @@
         svcTop.position.set(0, 0, 6.4);
         scene.add(svcTop);
         
-        // Center line
         const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 12.8), lineMat);
         centerLine.position.set(0, 0, 0);
         scene.add(centerLine);
@@ -203,40 +198,45 @@
         scene.add(netTape);
         
         // ================================================================
-        // PLAYERS (Simple but clean circles with paddles)
+        // RED & BLUE BATS (PADDLES)
         // ================================================================
         
-        // Player (Blue)
-        const playerGroup = new THREE.Group();
-        const playerBody = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.2 }));
-        playerBody.castShadow = true;
-        playerGroup.add(playerBody);
+        // Blue Bat (Player)
+        const blueBatGroup = new THREE.Group();
         
-        const playerRacket = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
-        playerRacket.position.set(0.6, 0.2, 0.3);
-        playerGroup.add(playerRacket);
-        const playerRacketHead = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
-        playerRacketHead.position.set(0.85, 0.45, 0.3);
-        playerGroup.add(playerRacketHead);
+        // Bat body
+        const blueBatBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.1), new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.5, emissive: 0x004466 }));
+        blueBatBody.castShadow = true;
+        blueBatGroup.add(blueBatBody);
         
-        scene.add(playerGroup);
-        playerGroup.position.set(0, 0.5, -8.5);
+        // Bat handle
+        const blueHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
+        blueHandle.position.set(0, -0.45, 0);
+        blueBatGroup.add(blueHandle);
         
-        // AI Player (Red)
-        const aiGroup = new THREE.Group();
-        const aiBody = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.2 }));
-        aiBody.castShadow = true;
-        aiGroup.add(aiBody);
+        // Bat glow effect
+        const blueGlow = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 0.12), new THREE.MeshStandardMaterial({ color: 0x44aaff, emissive: 0x44aaff, emissiveIntensity: 0.3, transparent: true, opacity: 0.3 }));
+        blueBatGroup.add(blueGlow);
         
-        const aiRacket = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
-        aiRacket.position.set(-0.6, 0.2, 0.3);
-        aiGroup.add(aiRacket);
-        const aiRacketHead = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
-        aiRacketHead.position.set(-0.85, 0.45, 0.3);
-        aiGroup.add(aiRacketHead);
+        scene.add(blueBatGroup);
+        blueBatGroup.position.set(0, 0.5, -8.5);
         
-        scene.add(aiGroup);
-        aiGroup.position.set(0, 0.5, 8.5);
+        // Red Bat (AI)
+        const redBatGroup = new THREE.Group();
+        
+        const redBatBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.1), new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.5, emissive: 0x442200 }));
+        redBatBody.castShadow = true;
+        redBatGroup.add(redBatBody);
+        
+        const redHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.08), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
+        redHandle.position.set(0, -0.45, 0);
+        redBatGroup.add(redHandle);
+        
+        const redGlow = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 0.12), new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff4444, emissiveIntensity: 0.3, transparent: true, opacity: 0.3 }));
+        redBatGroup.add(redGlow);
+        
+        scene.add(redBatGroup);
+        redBatGroup.position.set(0, 0.5, 8.5);
         
         // ================================================================
         // BALL
@@ -246,6 +246,12 @@
         const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), ballMat);
         ball.castShadow = true;
         scene.add(ball);
+        
+        // Ball trail
+        let ballTrail = [];
+        const trailMat = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.05 });
+        let trailPoints = new THREE.Points(new THREE.BufferGeometry(), trailMat);
+        scene.add(trailPoints);
         
         // ================================================================
         // GAME STATE
@@ -269,7 +275,7 @@
         let isPlayerServe = true;
         let serveCount = 0;
         
-        // Power
+        // Power control
         let charging = false;
         let chargePower = 0;
         let chargeStart = 0;
@@ -283,7 +289,7 @@
         const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
         
         // ================================================================
-        // SCORING
+        // SCORING FUNCTIONS
         // ================================================================
         
         function pointName(p) {
@@ -322,26 +328,29 @@
             updateDisplay();
             
             if (playerGames >= 6 && playerGames - aiGames >= 2) {
-                console.log("🏆 YOU WIN!");
+                console.log("🏆 YOU WIN THE SET! 🏆");
                 gameActive = false;
+                document.getElementById('serve-indicator').innerHTML = '🏆 YOU WIN! Press RESET';
             } else if (aiGames >= 6 && aiGames - playerGames >= 2) {
-                console.log("🤖 AI WINS!");
+                console.log("🤖 AI WINS THE SET! 🤖");
                 gameActive = false;
+                document.getElementById('serve-indicator').innerHTML = '🤖 AI WINS! Press RESET';
             }
             
-            // Next point
+            // Reset for next point
             isPlayerServe = !isPlayerServe;
             waitingForServe = true;
             pointActive = false;
             ballX = 0; ballY = 0.5; ballZ = 0;
             ballVX = 0; ballVY = 0; ballVZ = 0;
             ball.position.set(0, 0.5, 0);
+            ballTrail = [];
             serveCount = 0;
             
             if (isPlayerServe) {
                 document.getElementById('serve-indicator').innerHTML = '🎾 YOUR SERVE<br>HOLD SPACE to charge, RELEASE to serve';
             } else {
-                document.getElementById('serve-indicator').innerHTML = '🤖 AI SERVING...';
+                document.getElementById('serve-indicator').innerHTML = '🔴 AI SERVING...';
                 setTimeout(() => { if (gameActive && waitingForServe && !isPlayerServe) aiServe(); }, 600);
             }
         }
@@ -361,7 +370,7 @@
         }
         
         // ================================================================
-        // SERVE & HIT
+        // SERVE & HIT FUNCTIONS
         // ================================================================
         
         function playerServe(power) {
@@ -376,7 +385,11 @@
             ballVZ = speed;
             waitingForServe = false;
             pointActive = true;
-            document.getElementById('serve-indicator').innerHTML = '🎾 RALLY!';
+            document.getElementById('serve-indicator').innerHTML = '🎾 RALLY IN PROGRESS';
+            
+            // Flash bat on hit
+            blueBatBody.material.emissiveIntensity = 0.6;
+            setTimeout(() => blueBatBody.material.emissiveIntensity = 0, 100);
         }
         
         function aiServe() {
@@ -391,18 +404,27 @@
             ballVZ = -speed;
             waitingForServe = false;
             pointActive = true;
-            document.getElementById('serve-indicator').innerHTML = '🎾 RALLY!';
+            document.getElementById('serve-indicator').innerHTML = '🎾 RALLY IN PROGRESS';
+            
+            redBatBody.material.emissiveIntensity = 0.6;
+            setTimeout(() => redBatBody.material.emissiveIntensity = 0, 100);
         }
         
         function playerHit(power) {
             let dx = Math.abs(ballX - playerX);
             let dz = Math.abs(ballZ - playerZ);
-            if (dx < 1.2 && dz < 1.2 && ballVZ < 0) {
-                let dir = (ballX - playerX) * 4;
+            if (dx < 1.0 && dz < 1.2 && ballVZ < 0) {
+                let dir = (ballX - playerX) * 5;
                 ballVX = dir + (Math.random() - 0.5) * 1.5;
                 ballVY = 3 + power * 4;
                 ballVZ = -12 - power * 6;
-                console.log(`Hit! Power: ${Math.floor(power*100)}%`);
+                console.log(`🏓 Hit! Power: ${Math.floor(power*100)}%`);
+                
+                // Flash bat on hit
+                blueBatBody.material.emissiveIntensity = 0.8;
+                setTimeout(() => blueBatBody.material.emissiveIntensity = 0, 100);
+                blueBatGroup.rotation.z = -0.3;
+                setTimeout(() => blueBatGroup.rotation.z = 0, 150);
             }
         }
         
@@ -411,12 +433,17 @@
             if (ballVZ <= 0) return;
             let dx = Math.abs(ballX - aiX);
             let dz = Math.abs(ballZ - aiZ);
-            if (dx < 1.5 && dz < 1.5 && ballVZ > 0) {
+            if (dx < 1.2 && dz < 1.2 && ballVZ > 0) {
                 let power = 0.4 + Math.random() * 0.5;
-                let dir = (ballX - aiX) * 3;
+                let dir = (ballX - aiX) * 4;
                 ballVX = dir + (Math.random() - 0.5) * 1.5;
                 ballVY = 3 + power * 3;
                 ballVZ = 12 + power * 6;
+                
+                redBatBody.material.emissiveIntensity = 0.8;
+                setTimeout(() => redBatBody.material.emissiveIntensity = 0, 100);
+                redBatGroup.rotation.z = 0.3;
+                setTimeout(() => redBatGroup.rotation.z = 0, 150);
             }
         }
         
@@ -430,7 +457,7 @@
                 charging = true;
                 chargePower = 0;
                 chargeStart = performance.now() / 1000;
-            } else if (pointActive && ballVZ < 0 && Math.abs(ballZ - playerZ) < 2) {
+            } else if (pointActive && ballVZ < 0 && Math.abs(ballZ - playerZ) < 3) {
                 charging = true;
                 chargePower = 0;
                 chargeStart = performance.now() / 1000;
@@ -449,12 +476,12 @@
         function updateCharge() {
             if (!charging) return;
             let now = performance.now() / 1000;
-            chargePower = Math.min(1, (now - chargeStart) * 2);
+            chargePower = Math.min(1, (now - chargeStart) * 2.5);
             document.getElementById('power-fill').style.width = `${Math.floor(chargePower * 100)}%`;
         }
         
         // ================================================================
-        // PHYSICS (NO STUCK BALL!)
+        // PHYSICS
         // ================================================================
         
         function updatePhysics(delta) {
@@ -482,21 +509,32 @@
                 return;
             }
             
-            // Net collision - Ball goes OVER net, not through it
-            // Net is at Z=0, we just let ball pass over - no collision
-            
-            // AI hits automatically
+            // AI hits
             aiHit();
             
-            // Update positions
+            // Update ball position
             ball.position.set(ballX, ballY, ballZ);
             
-            // Move AI toward ball
+            // Update trail
+            ballTrail.unshift({ x: ballX, y: ballY, z: ballZ });
+            if (ballTrail.length > 15) ballTrail.pop();
+            const verts = [];
+            for (let p of ballTrail) verts.push(p.x, p.y + 0.05, p.z);
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+            scene.remove(trailPoints);
+            trailPoints = new THREE.Points(geo, trailMat);
+            scene.add(trailPoints);
+            
+            // Move AI bat toward ball
             if (pointActive && !waitingForServe) {
-                let targetX = Math.max(-5, Math.min(5, ballX));
+                let targetX = Math.max(-5.5, Math.min(5.5, ballX));
                 aiX += (targetX - aiX) * 0.15;
-                aiGroup.position.set(aiX, 0.5, 8.5);
-                aiGroup.rotation.y = Math.atan2(ballX - aiX, -1) * 0.5;
+                redBatGroup.position.set(aiX, 0.5, 8.5);
+                
+                // Rotate AI bat to face ball
+                let angle = Math.atan2(ballX - aiX, -2);
+                redBatGroup.rotation.y = Math.min(0.6, Math.max(-0.6, angle * 0.5));
             }
         }
         
@@ -507,14 +545,21 @@
         function updatePlayer(delta) {
             if (!gameActive) return;
             let newX = playerX;
+            let newZ = playerZ;
             if (keys.ArrowLeft) newX -= SPEED * delta;
             if (keys.ArrowRight) newX += SPEED * delta;
+            if (keys.ArrowUp) newZ += SPEED * delta;
+            if (keys.ArrowDown) newZ -= SPEED * delta;
             playerX = Math.max(-5.5, Math.min(5.5, newX));
-            playerGroup.position.set(playerX, 0.5, -8.5);
-            if (pointActive) {
-                playerGroup.rotation.y = Math.atan2(ballX - playerX, 1) * 0.5;
+            playerZ = Math.max(-10, Math.min(-7, newZ));
+            blueBatGroup.position.set(playerX, 0.5, playerZ);
+            
+            // Rotate blue bat to face ball
+            if (pointActive && !waitingForServe) {
+                let angle = Math.atan2(ballX - playerX, 2);
+                blueBatGroup.rotation.y = Math.min(0.6, Math.max(-0.6, angle * 0.5));
             } else {
-                playerGroup.rotation.y = 0;
+                blueBatGroup.rotation.y = 0;
             }
         }
         
@@ -531,11 +576,14 @@
             pointActive = false;
             ballX = 0; ballY = 0.5; ballZ = 0;
             ballVX = 0; ballVY = 0; ballVZ = 0;
-            playerX = 0; aiX = 0;
+            playerX = 0; playerZ = -8.5;
+            aiX = 0;
             ball.position.set(0, 0.5, 0);
-            playerGroup.position.set(0, 0.5, -8.5);
-            aiGroup.position.set(0, 0.5, 8.5);
+            ballTrail = [];
+            blueBatGroup.position.set(0, 0.5, -8.5);
+            redBatGroup.position.set(0, 0.5, 8.5);
             updateDisplay();
+            document.getElementById('power-fill').style.width = '0%';
             document.getElementById('serve-indicator').innerHTML = '🎾 Match reset - press START';
         }
         
@@ -546,7 +594,7 @@
             isPlayerServe = true;
             document.getElementById('game-status').textContent = "Playing";
             document.getElementById('game-status').className = 'status-playing';
-            document.getElementById('serve-indicator').innerHTML = '🎾 YOUR SERVE<br>HOLD SPACE to charge, RELEASE to serve';
+            document.getElementById('serve-indicator').innerHTML = '🔵 YOUR SERVE<br>HOLD SPACE to charge, RELEASE to serve';
         }
         
         function stopMatch() {
@@ -557,7 +605,7 @@
         }
         
         // ================================================================
-        // EVENTS
+        // EVENT HANDLERS
         // ================================================================
         
         window.addEventListener('keydown', (e) => {
@@ -596,9 +644,9 @@
             updatePhysics(delta);
             updateCharge();
             
-            // Idle bounce
-            playerGroup.position.y = 0.5 + Math.sin(Date.now() * 0.005) * 0.02;
-            aiGroup.position.y = 0.5 + Math.sin(Date.now() * 0.005 + 2) * 0.02;
+            // Idle floating animation
+            blueBatGroup.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.02;
+            redBatGroup.position.y = 0.5 + Math.sin(Date.now() * 0.003 + 2) * 0.02;
             
             renderer.render(scene, camera);
             requestAnimationFrame(animate);
@@ -615,18 +663,20 @@
         });
         
         console.log('========================================');
-        console.log('🎾 CLEAN LAWN TENNIS - READY!');
-        console.log('========================================');
+        console.log('🎾 LAWN TENNIS - RED vs BLUE BATS');
+        echo '========================================';
+        console.log('');
         console.log('CONTROLS:');
-        console.log('  ← → ↑ ↓ = Move');
+        console.log('  ← → ↑ ↓ = Move your BLUE bat');
         console.log('  HOLD SPACE = Charge power');
         console.log('  RELEASE SPACE = Serve/Hit');
         console.log('');
-        console.log('FIXES:');
-        console.log('  ✅ Ball no longer stuck in net');
-        console.log('  ✅ Clean, modern graphics');
-        console.log('  ✅ Smooth gameplay');
-        console.log('  ✅ Proper tennis scoring');
+        console.log('FEATURES:');
+        console.log('  ✅ Red and Blue bats with glow effects');
+        console.log('  ✅ Real tennis scoring (15/30/40/Game)');
+        console.log('  ✅ Two serves per point');
+        console.log('  ✅ AI returns shots');
+        console.log('  ✅ Ball trail effect');
         console.log('========================================');
     </script>
 </body>
